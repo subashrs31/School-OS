@@ -4,7 +4,7 @@
 > `DATETIME`, `JSON`, **NN** = required). Physical DB: PostgreSQL 16, via Prisma.
 > **AUDIT** = `created_at` NN · `created_by` · `updated_at` · `updated_by`. **VERSION** = `row_version` NN.
 >
-> Origin: design doc §4.1 identity columns and §9 subscription tables move here (ADR-005). school-os-be keeps a
+> Origin: design doc §4.1 identity columns and §9 subscription tables move here (ADR-005). The backend keeps a
 > profile row linked by `identity_subject` = this service's `users.public_id`.
 
 ## 1. Tables
@@ -33,7 +33,7 @@ tenants/users ─< webhook_events ─< webhook_deliveries
 | Column | Type | Rule / why |
 |---|---|---|
 | id | ID | |
-| public_id | TEXT(36) NN | UUID; the OIDC `sub`; stored by school-os-be as `identity_subject`. Never changes |
+| public_id | TEXT(36) NN | UUID; the OIDC `sub`; stored by the backend as `identity_subject`. Never changes |
 | plane | CHOICE(PLATFORM, SCHOOL) NN | Platform and school identities never mix |
 | email | TEXT(150) | Unique (case-insensitive) when present |
 | email_verified_at | DATETIME | |
@@ -81,7 +81,7 @@ Rule: one confirmed factor per `(user, type)`.
 | Column | Type | Rule / why |
 |---|---|---|
 | id | ID | |
-| public_id | TEXT(36) NN | Equals school-os-be `organizations.public_id`; unique |
+| public_id | TEXT(36) NN | Equals backend `organizations.public_id`; unique |
 | name | TEXT(150) NN | Display copy |
 | status | CHOICE(PENDING, ACTIVE, INACTIVE, SUSPENDED, CLOSED) NN | Same values as design §3.1; drives webhooks |
 | status_source | CHOICE(MANUAL, LICENSE) NN | SUSPENDED is always MANUAL and not overridden by licences |
@@ -95,7 +95,7 @@ Rule: one confirmed factor per `(user, type)`.
 | tenant_id | REF(tenants) NN | |
 | user_id | REF(users) NN | Plane must be SCHOOL |
 | status | CHOICE(INVITED, ACTIVE, REMOVED) NN | |
-| is_tenant_admin | FLAG NN | Set by school-os-be; admins may sign in to an INACTIVE tenant to renew; 2FA required |
+| is_tenant_admin | FLAG NN | Set by the backend; admins may sign in to an INACTIVE tenant to renew; 2FA required |
 | invited_at, activated_at, removed_at | DATETIME | |
 
 Rule: one row per `(tenant_id, user_id)`. Used for sign-in eligibility and seat limits, not for permissions.
@@ -107,7 +107,7 @@ id · key TEXT(50) NN unique · name TEXT(100) NN · description · billing_peri
 price DECIMAL(10,2) NN · currency TEXT(3) NN · grace_days NUMBER NN · status CHOICE(ACTIVE, RETIRED) NN
 
 ### 4.2 `plan_features`
-plan_id REF(plans) NN · feature_key TEXT(50) NN (matches school-os-be `permissions.module`) · limit_value NUMBER
+plan_id REF(plans) NN · feature_key TEXT(50) NN (matches backend `permissions.module`) · limit_value NUMBER
 (empty = unlimited). Rule: primary key `(plan_id, feature_key)`.
 
 ### 4.3 `tenant_licenses` · +AUDIT +VERSION

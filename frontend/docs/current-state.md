@@ -1,10 +1,12 @@
-# school-os-fe — Current State Report (Phase 0)
+# frontend — Current State Report (Phase 0)
 
-> Snapshot of **`origin/dev@118e6ec`** ("School Config", 2026-09-28), read-only via `git show`; nothing was run.
-> Backend compared at `school-os-be@origin/dev e23badf`.
+> Snapshot of **`origin/dev@118e6ec`** ("School Config", 2026-09-28) of the former `school-os-fe` repository,
+> read-only via `git show`; nothing was run. Backend compared at `school-os-be@origin/dev e23badf`.
+> Both repositories were merged into this single School-OS repository on 2026-09-30 (ADR-006); paths below are
+> relative to `frontend/`.
 > Tags: **[F]** fact from code · **[H]** hypothesis not executed · **UNKNOWN — REQUIRES CONFIRMATION**.
 > Cross-cutting state (APIs, database, authorization, security, known BE bugs) lives in
-> `school-os-be/docs/current-state.md`. Bug IDs (B1…B13) are shared between both documents.
+> [backend/docs/current-state.md](../../backend/docs/current-state.md). Bug IDs (B1…B13) are shared between both documents.
 
 ## 1. Stack
 

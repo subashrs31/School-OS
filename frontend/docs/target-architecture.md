@@ -1,15 +1,16 @@
-# school-os-fe — Target Architecture (Proposed)
+# frontend — Target Architecture (Proposed)
 
-> Status: **Proposed — awaiting approval.** Cross-cutting decisions are ADRs in the backend repo:
-> `school-os-be/docs/architecture/` — ADR-003 (tenant scoping), ADR-004 (testing), ADR-005 (license server / OIDC).
-> System view: `school-os-be/docs/target-architecture.md`.
+> Status: **Proposed — awaiting approval.** Cross-cutting decisions are ADRs in
+> [backend/docs/architecture/](../../backend/docs/architecture/) — ADR-003 (tenant scoping), ADR-004 (testing),
+> ADR-005 (license server / OIDC), ADR-006 (single repository).
+> System view: [backend/docs/target-architecture.md](../../backend/docs/target-architecture.md).
 
 ## 1. Sign-in (ADR-005)
 
 ```mermaid
 sequenceDiagram
   participant B as Browser (SPA)
-  participant API as school-os-be (BFF)
+  participant API as backend (BFF)
   participant LS as license server
   B->>API: GET /api/v1/auth/me
   API-->>B: 401 (no session)

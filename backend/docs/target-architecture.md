@@ -23,8 +23,8 @@ flowchart LR
   PU[Platform staff<br/>super admin, support] --> SPA
   SU[School users<br/>admin, branch admin, teacher, accountant] --> SPA
   GU[Guardians / students<br/>later] --> SPA
-  SPA[school-os-fe<br/>React SPA] -->|REST /api/v1 + session cookie| API[school-os-be<br/>Express modular monolith, OIDC client]
-  SPA -->|hosted login pages| LS[school-os-license-server<br/>OIDC provider + licensing]
+  SPA[frontend<br/>React SPA] -->|REST /api/v1 + session cookie| API[backend<br/>Express modular monolith, OIDC client]
+  SPA -->|hosted login pages| LS[license-server<br/>OIDC provider + licensing]
   API -->|OIDC code exchange, JWKS, admin API| LS
   LS -. signed webhooks .-> API
   API --> PG[(PostgreSQL 16: school DB)]
@@ -34,7 +34,8 @@ flowchart LR
   API --> S3[S3 / local storage]
 ```
 
-Repositories: `school-os-fe`, `school-os-be` (this repo; cross-cutting ADRs live here), `school-os-license-server`.
+One repository, three folders (ADR-006): `frontend/`, `backend/` (cross-cutting ADRs live in `backend/docs/`),
+`license-server/`.
 
 ## 3. Backend
 
@@ -113,7 +114,7 @@ sequenceDiagram
 
 ### 3.5 Authentication — delegated to the license server (ADR-005, Phase 4)
 
-- school-os-be is an **OIDC confidential client / BFF** (`openid-client`): `GET /api/v1/auth/login` → redirect to the
+- The backend is an **OIDC confidential client / BFF** (`openid-client`): `GET /api/v1/auth/login` → redirect to the
   license server with code + PKCE + state; `GET /api/v1/auth/callback` exchanges the code; `POST /api/v1/auth/logout` ends the
   local session and redirects to the license server's end-session endpoint.
 - Tokens stay server-side, in a `sessions` table (encrypted refresh token, expiry). The browser gets an HttpOnly,
@@ -122,7 +123,7 @@ sequenceDiagram
   `jose` against the cached JWKS (`iss`, `aud = school-os-api`, `exp`) → local profile looked up by `identity_subject`
   → rejected if the profile is inactive or its `access_version` changed.
 - Credentials, 2FA, lockout, password reset and sign-in blocking for unlicensed tenants are **license-server**
-  responsibilities. school-os-be has no password column and no JWT signing key.
+  responsibilities. The backend has no password column and no JWT signing key.
 - `POST /api/v1/auth/license-events` receives HMAC-signed, idempotent webhooks and updates `organizations.status`
   (`status_source = SUBSCRIPTION`) with an `audit_logs` row. A daily job reconciles tenant status.
 - Removed: register, forgot/reset, bcrypt, passport, Google/Microsoft OAuth, `user_oauth_accounts`, `resetPasswords.ts`.
@@ -147,10 +148,11 @@ listeners registered in `bootstrap.ts`. Outbox pattern (design §9.3) later.
 
 ## 4. Frontend and license server
 
-- Frontend target architecture: `school-os-fe/docs/target-architecture.md`. Contract points owned by this repo:
+- Frontend target architecture: [frontend/docs/target-architecture.md](../../frontend/docs/target-architecture.md).
+  Contract points owned by the backend:
   login is a redirect to `/api/v1/auth/login`; updates use `PATCH`; mutating requests send `X-XSRF-TOKEN`; lists use the
   pagination contract in §3.3.
-- License server architecture, data model and API: `school-os-license-server/docs/`.
+- License server architecture, data model and API: [license-server/docs/](../../license-server/README.md).
 
 ## 5. Testing architecture (ADR-004)
 
@@ -197,7 +199,8 @@ specified in the license-server docs.
 
 ## 9. Deployment (Phase 10)
 
-Dockerfile per repo, docker-compose for local (web + api + license server + two Postgres databases). `dev` is not
+Dockerfile per folder (`backend/`, `frontend/`, `license-server/`), one `docker-compose.yml` at the repository root for
+local (web + api + license server + two Postgres databases). One CI workflow with path filters per folder. `dev` is not
 deployed anywhere today (owner, 2026-09-30). Target hosting is **UNKNOWN — REQUIRES CONFIRMATION**; pipeline design
 waits on that answer.
 

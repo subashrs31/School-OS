@@ -30,7 +30,7 @@ The system is a modular monolith with one database (ADR-001); a microservice spl
    organization or branch scope only.
 5. **Delegation ceiling:** a grant succeeds only if the granter holds the role's permissions at an equal or wider
    scope; `primary` roles/assignments can only be created by `primary`. Every grant/revoke writes `audit_logs`.
-6. **Session freshness:** access tokens are issued by the license server (ADR-005), so school-os-be cannot put its
+6. **Session freshness:** access tokens are issued by the license server (ADR-005), so backend cannot put its
    own values in them. Instead the local profile `users.access_version` is copied into the BFF session row at sign-in
    and used as the permission-cache key; any role/permission/status change increments it, so the next request
    recomputes permissions and a disabled profile is rejected immediately. The token's `av` claim is the license

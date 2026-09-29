@@ -12,7 +12,7 @@ PICT, unit, integration, API and Playwright E2E testing. The FE already builds w
 | Unit + integration | **Vitest 5.0.x** | BE and FE |
 | API | **Supertest 7.3.x** on the Express `app` (no network port) | BE |
 | Component | **@testing-library/react 16.3.x** + jsdom | FE |
-| E2E + BDD | **@playwright/test 1.63.x** + **playwright-bdd 9.2.x** (Gherkin `.feature` → Playwright tests) | new `e2e/` folder in FE repo |
+| E2E + BDD | **@playwright/test 1.63.x** + **playwright-bdd 9.2.x** (Gherkin `.feature` → Playwright tests) | new `frontend/e2e/` folder |
 | Pairwise | **Microsoft PICT** CLI (not an npm dependency); models in `docs/pict/*.txt`, generated tables committed next to them | docs |
 | Test DB | PostgreSQL 16 in docker-compose, separate `TEST_DATABASE_URL` | BE |
 
