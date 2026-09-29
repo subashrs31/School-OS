@@ -1,6 +1,6 @@
 # ADR-004: Testing stack
 
-**Status:** Proposed · **Date:** 2026-09-29
+**Status:** Accepted (owner, 2026-09-30) · **Date:** 2026-09-29
 
 ## Context
 Neither repository has any tests, test runner or CI (`current-state.md` §10, §12). The mandate requires TDD, BDD,

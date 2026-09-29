@@ -1,6 +1,6 @@
 # ADR-003: Tenant scoping and scoped RBAC
 
-**Status:** Proposed · **Date:** 2026-09-29
+**Status:** Accepted (owner, 2026-09-30) · **Date:** 2026-09-29
 
 ## Context
 Evidence on `origin/dev` (see `current-state.md` §9):

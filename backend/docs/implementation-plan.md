@@ -41,7 +41,7 @@ The license server (Phase LS) is built in the `license-server/` folder in parall
 | # | Sub-phase | Status |
 |---|---|---|
 | 1.1–1.11 | Target architecture, module boundaries, API, DB, Prisma, auth, authz, errors, logging, observability, security baseline | 🟡 proposed in `target-architecture.md` |
-| 1.12 | ADR-001…005 approval | ⏸ owner |
+| 1.12 | ADR-001…005 approval | ✅ accepted by the owner 2026-09-30 (ADR-006 accepted earlier the same day) |
 
 ## Phase 1.5 — Security hot-fixes on the current code — ❌ dropped (2026-09-30)
 Owner confirmed `dev` is not deployed anywhere. The defects are fixed in the rewrite instead, where the code is
@@ -167,4 +167,4 @@ Full suite: unit, integration, API, contract, PICT, Playwright (browser matrix),
 2. Login identifier in the license server: email and mobile only, or also keep the current uuid-style codes
    (e.g. `DNSTSA0001`)? (LS-1)
 3. Hosting target (Phase 10).
-4. Approve ADR-001…005 and the dependencies they list.
+4. ~~Approve ADR-001…005 and the dependencies they list.~~ Approved 2026-09-30.

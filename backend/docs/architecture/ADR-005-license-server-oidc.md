@@ -1,6 +1,6 @@
 # ADR-005: Separate license server for identity and licensing (OpenID Connect)
 
-**Status:** Proposed · **Date:** 2026-09-30 · **Supersedes:** OAuth parts of `current-state.md` §8 (Google/Microsoft)
+**Status:** Accepted (owner, 2026-09-30) · **Date:** 2026-09-30 · **Supersedes:** OAuth parts of `current-state.md` §8 (Google/Microsoft)
 
 ## Context
 - Owner decisions (2026-09-30): no Google/Microsoft sign-in; a custom **license server** runs authentication for

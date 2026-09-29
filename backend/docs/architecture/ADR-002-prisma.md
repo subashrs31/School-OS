@@ -1,6 +1,6 @@
 # ADR-002: Replace Sequelize with Prisma ORM
 
-**Status:** Proposed · **Date:** 2026-09-29
+**Status:** Accepted (owner, 2026-09-30) · **Date:** 2026-09-29
 
 ## Context
 - Current data access: Sequelize 6 models without FK declarations, associations in `src/models/index.ts`,

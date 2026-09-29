@@ -1,6 +1,6 @@
 # ADR-001: Move the database from MySQL to PostgreSQL
 
-**Status:** Proposed · **Date:** 2026-09-29
+**Status:** Accepted (owner, 2026-09-30) · **Date:** 2026-09-29
 
 ## Context
 - The project mandate (master engineering prompt) requires MySQL → PostgreSQL.
