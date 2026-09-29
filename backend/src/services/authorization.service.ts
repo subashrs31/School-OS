@@ -1,5 +1,5 @@
-import { Op } from 'sequelize';
-import { Permission, RoleHasPermission, UserHasPermission, UserHasRole, Role } from '../models/index';
+import prisma from '../lib/prisma';
+import { Prisma } from '../generated/prisma/client';
 import { RoleSummary, ScopeContext } from '../types';
 
 const now = () => new Date();
@@ -9,17 +9,25 @@ const now = () => new Date();
  * Global roles/permissions apply everywhere.
  * Scoped roles/permissions apply only within their scope.
  */
-const scopeWhere = (ctx: ScopeContext) => {
+const scopeWhere = (ctx: ScopeContext): Prisma.UserHasRoleWhereInput & Prisma.UserHasPermissionWhereInput => {
   if (!ctx.scopeType || ctx.scopeType === 'global') {
     return { scopeType: 'global', scopeId: null };
   }
   return {
-    [Op.or]: [
+    OR: [
       { scopeType: 'global', scopeId: null },
-      { scopeType: ctx.scopeType, scopeId: ctx.scopeId ?? null },
+      { scopeType: ctx.scopeType as 'organization', scopeId: ctx.scopeId ?? null },
     ],
   };
 };
+
+// Active, unexpired and in scope. (Under Sequelize the scope's Op.or overwrote the expiry Op.or when a scope was
+// passed; no caller passes a scope today, so both conditions are simply combined here.)
+const activeInScope = (userId: number, ctx: ScopeContext) => ({
+  userId,
+  isActive: true,
+  AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gt: now() } }] }, scopeWhere(ctx)],
+});
 
 export interface EffectivePermissions {
   all: boolean;
@@ -32,44 +40,31 @@ const authorizationService = {
    * Global roles are always included.
    */
   getUserRoles: async (userId: number, ctx: ScopeContext = {}): Promise<RoleSummary[]> => {
-    const entries = await UserHasRole.findAll({
-      where: {
-        userId,
-        isActive: true,
-        [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: now() } }],
-        ...scopeWhere(ctx),
-      },
-      include: [{ model: Role, attributes: ['id', 'name', 'slug', 'roleType', 'isSystem'] }],
+    const entries = await prisma.userHasRole.findMany({
+      where: activeInScope(userId, ctx),
+      include: { Role: { select: { id: true, name: true, slug: true, roleType: true, isSystem: true } } },
     });
 
     return entries
-      .filter(e => (e as unknown as { Role?: Role }).Role)
-      .map(e => {
-        const r = (e as unknown as { Role: Role }).Role;
-        return {
-          id: r.id,
-          name: r.name,
-          slug: r.slug,
-          scopeType: (e as unknown as { scopeType: string }).scopeType,
-          scopeId: (e as unknown as { scopeId: number | null }).scopeId,
-          roleType: (r.roleType ?? 'normal') as 'primary' | 'secondary' | 'normal',
-          isSystem: r.isSystem ?? false,
-        };
-      });
+      .filter(e => e.Role)
+      .map(e => ({
+        id: e.Role.id,
+        name: e.Role.name,
+        slug: e.Role.slug,
+        scopeType: e.scopeType,
+        scopeId: e.scopeId,
+        roleType: (e.Role.roleType ?? 'normal') as 'primary' | 'secondary' | 'normal',
+        isSystem: e.Role.isSystem ?? false,
+      }));
   },
 
   /**
    * Returns all direct user permission overrides (allow + deny) for a scope.
    */
   getUserDirectPermissions: async (userId: number, ctx: ScopeContext = {}) => {
-    return UserHasPermission.findAll({
-      where: {
-        userId,
-        isActive: true,
-        [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: now() } }],
-        ...scopeWhere(ctx),
-      },
-      include: [{ model: Permission, attributes: ['id', 'slug', 'resource', 'action'] }],
+    return prisma.userHasPermission.findMany({
+      where: activeInScope(userId, ctx),
+      include: { Permission: { select: { id: true, slug: true, resource: true, action: true } } },
     });
   },
 
@@ -92,24 +87,23 @@ const authorizationService = {
     const directAllowed = new Set<string>();
 
     for (const entry of directEntries) {
-      const perm = (entry as unknown as { Permission?: { slug: string } }).Permission;
+      const perm = entry.Permission;
       if (!perm) continue;
-      if ((entry as unknown as { effect: string }).effect === 'deny') denied.add(perm.slug);
+      if (entry.effect === 'deny') denied.add(perm.slug);
       else directAllowed.add(perm.slug);
     }
 
     const roleIds = roles.map(r => r.id);
     const rolePermEntries = roleIds.length
-      ? await RoleHasPermission.findAll({
-          where: { roleId: { [Op.in]: roleIds } },
-          include: [{ model: Permission, attributes: ['id', 'slug'], where: { isActive: true } }],
+      ? await prisma.roleHasPermission.findMany({
+          where: { roleId: { in: roleIds }, Permission: { isActive: true } },
+          include: { Permission: { select: { id: true, slug: true } } },
         })
       : [];
 
     const fromRoles = new Set<string>();
     for (const rp of rolePermEntries) {
-      const perm = (rp as unknown as { Permission?: { slug: string } }).Permission;
-      if (perm) fromRoles.add(perm.slug);
+      if (rp.Permission) fromRoles.add(rp.Permission.slug);
     }
 
     const items: string[] = [];
@@ -132,41 +126,30 @@ const authorizationService = {
     if (!resource || !action) return false;
 
     // Single query: fetch all active role assignments with roleType
-    const userRoles = await UserHasRole.findAll({
-      where: {
-        userId,
-        isActive: true,
-        [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: now() } }],
-        ...scopeWhere(ctx),
-      },
-      include: [{ model: Role, attributes: ['id', 'roleType'] }],
+    const userRoles = await prisma.userHasRole.findMany({
+      where: activeInScope(userId, ctx),
+      include: { Role: { select: { id: true, roleType: true } } },
     });
 
     // primary role = full access, skip everything
-    if (userRoles.some(e => (e as unknown as { Role?: { roleType: string } }).Role?.roleType === 'primary')) return true;
+    if (userRoles.some(e => e.Role?.roleType === 'primary')) return true;
 
     if (!userRoles.length) return false;
 
-    const permission = await Permission.findOne({ where: { resource, action, isActive: true } });
+    const permission = await prisma.permission.findFirst({ where: { resource, action, isActive: true } });
     if (!permission) return false;
 
     // 1. Check direct user permission overrides (applies to secondary and normal both)
-    const direct = await UserHasPermission.findOne({
-      where: {
-        userId,
-        permissionId: permission.id,
-        isActive: true,
-        [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: now() } }],
-        ...scopeWhere(ctx),
-      },
+    const direct = await prisma.userHasPermission.findFirst({
+      where: { ...activeInScope(userId, ctx), permissionId: permission.id },
     });
 
-    if ((direct as unknown as { effect?: string } | null)?.effect === 'deny') return false;
-    if ((direct as unknown as { effect?: string } | null)?.effect === 'allow') return true;
+    if (direct?.effect === 'deny') return false;
+    if (direct?.effect === 'allow') return true;
 
     // 2. Check role-based permissions
-    const roleIds = userRoles.map(r => (r as unknown as { roleId: number }).roleId);
-    const hasRolePerm = await RoleHasPermission.findOne({ where: { roleId: { [Op.in]: roleIds }, permissionId: permission.id } });
+    const roleIds = userRoles.map(r => r.roleId);
+    const hasRolePerm = await prisma.roleHasPermission.findFirst({ where: { roleId: { in: roleIds }, permissionId: permission.id } });
 
     return !!hasRolePerm;
   },

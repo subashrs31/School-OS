@@ -14,14 +14,18 @@ PICT, unit, integration, API and Playwright E2E testing. The FE already builds w
 | Component | **@testing-library/react 16.3.x** + jsdom | FE |
 | E2E + BDD | **@playwright/test 1.63.x** + **playwright-bdd 9.2.x** (Gherkin `.feature` → Playwright tests) | new `frontend/e2e/` folder |
 | Pairwise | **Microsoft PICT** CLI (not an npm dependency); models in `docs/pict/*.txt`, generated tables committed next to them | docs |
-| Test DB | PostgreSQL 16 in docker-compose, separate `TEST_DATABASE_URL` | BE |
+| Test DB | Local PostgreSQL 18 database `school_os_test`, separate `TEST_DATABASE_URL` | BE |
 
 All are **devDependencies**; each is added in the sub-phase that first needs it, with approval.
 
 ## Rules
 - The test database URL must differ from `DATABASE_URL`; the test setup refuses to run otherwise.
-- Schema is applied to the test DB by the test setup script (`prisma migrate reset --force` against
-  `TEST_DATABASE_URL` only). The project owner runs it; the assistant does not execute Prisma migration commands.
+- Schema is applied to the test DB with `npm run db:test:migrate` (`prisma migrate deploy` against
+  `TEST_DATABASE_URL`, refuses unless the DB name ends in `_test`). The project owner runs it; the assistant does not
+  execute Prisma migration commands (see [prisma-migrations.md](../prisma-migrations.md)). Tests empty the tables
+  themselves (`TRUNCATE … CASCADE`) instead of resetting the schema.
+- **Implemented 2026-09-30 (2.0-P):** Vitest 5.0.2 + Supertest 7.3.0 in `backend/`; `test/guard.ts` refuses to run
+  against a non-test database; `test/unit`, `test/integration`, `test/api`.
 - Fixtures are created through services or the API, never through the UI (except in tests that verify that UI).
 - Playwright: Chromium on every PR; Firefox, WebKit and one mobile viewport nightly.
 - Every bug fix adds a regression test that fails before the fix.

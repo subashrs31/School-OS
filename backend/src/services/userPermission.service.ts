@@ -1,5 +1,7 @@
-import { UserHasPermission, Permission } from '../models/index';
+import prisma from '../lib/prisma';
+import { Prisma } from '../generated/prisma/client';
 import { throwError } from '../helpers/throwError';
+import { modelData } from '../helpers/modelData';
 import { ScopeContext } from '../types';
 
 interface AssignPermissionBody {
@@ -14,49 +16,43 @@ interface AssignPermissionBody {
 
 const userPermissionService = {
   getUserPermissions: async (userId: number, ctx: ScopeContext = {}): Promise<unknown[]> => {
-    const where: Record<string, unknown> = { userId, isActive: true };
-    if (ctx.scopeType) { where['scopeType'] = ctx.scopeType; where['scopeId'] = ctx.scopeId ?? null; }
-    const entries = await UserHasPermission.findAll({
-      where,
-      include: [{ model: Permission }],
-    });
+    const where: Prisma.UserHasPermissionWhereInput = { userId, isActive: true };
+    if (ctx.scopeType) { where.scopeType = ctx.scopeType; where.scopeId = ctx.scopeId ?? null; }
+    const entries = await prisma.userHasPermission.findMany({ where, include: { Permission: true } });
     return entries
-      .map(e => ({
-        ...(e as unknown as { Permission?: { toJSON: () => Record<string, unknown> } }).Permission?.toJSON(),
-        effect: (e as unknown as { effect: string }).effect,
-        scopeType: (e as unknown as { scopeType: string }).scopeType,
-        scopeId: (e as unknown as { scopeId: number | null }).scopeId,
-      }))
-      .filter(p => (p as { id?: unknown }).id);
+      .map(e => ({ ...e.Permission, effect: e.effect, scopeType: e.scopeType, scopeId: e.scopeId }))
+      .filter(p => p.id);
   },
 
-  assignUserPermission: async (userId: number, body: AssignPermissionBody): Promise<UserHasPermission> => {
+  assignUserPermission: async (userId: number, body: AssignPermissionBody) => {
     const { permissionId, effect, scopeType = 'global', scopeId = null, expiresAt = null, assignedBy = null, remarks = '' } = body;
-    const exists = await UserHasPermission.findOne({ where: { userId, permissionId, scopeType, scopeId } });
+    const exists = await prisma.userHasPermission.findFirst({ where: { userId, permissionId: Number(permissionId), scopeType, scopeId } });
     if (exists) throwError('Permission already assigned to this user in this scope', 409);
-    return UserHasPermission.create({ userId, permissionId, effect, scopeType, scopeId, expiresAt, assignedBy, remarks });
+    return prisma.userHasPermission.create({
+      data: { userId, permissionId: Number(permissionId), effect, scopeType, scopeId, expiresAt: expiresAt ? new Date(expiresAt) : null, assignedBy, remarks },
+    });
   },
 
-  updateUserPermission: async (userId: number, permissionId: number, scopeType: 'global' | 'organization', scopeId: number | null, body: Partial<AssignPermissionBody>): Promise<UserHasPermission> => {
-    const entry = await UserHasPermission.findOne({ where: { userId, permissionId, scopeType, scopeId } });
+  updateUserPermission: async (userId: number, permissionId: number, scopeType: 'global' | 'organization', scopeId: number | null, body: Partial<AssignPermissionBody>) => {
+    const entry = await prisma.userHasPermission.findFirst({ where: { userId, permissionId, scopeType, scopeId } });
     if (!entry) throwError('Permission assignment not found', 404);
-    return entry!.update(body);
+    return prisma.userHasPermission.update({ where: { id: entry!.id }, data: modelData(Prisma.UserHasPermissionScalarFieldEnum, body as Record<string, unknown>) });
   },
 
-  revokeUserPermission: async (userId: number, permissionId: number, scopeType: 'global' | 'organization' = 'global', scopeId: number | null = null): Promise<UserHasPermission> => {
-    const entry = await UserHasPermission.findOne({ where: { userId, permissionId, scopeType, scopeId } });
+  revokeUserPermission: async (userId: number, permissionId: number, scopeType: 'global' | 'organization' = 'global', scopeId: number | null = null) => {
+    const entry = await prisma.userHasPermission.findFirst({ where: { userId, permissionId, scopeType, scopeId } });
     if (!entry) throwError('Permission not assigned to this user in this scope', 404);
-    await entry!.destroy();
+    await prisma.userHasPermission.delete({ where: { id: entry!.id } });
     return entry!;
   },
 
   syncUserPermissions: async (userId: number, permissions: Array<{ permissionId: number; effect: 'allow' | 'deny' }>): Promise<unknown[]> => {
-    await UserHasPermission.destroy({ where: { userId } });
+    await prisma.userHasPermission.deleteMany({ where: { userId } });
     if (permissions.length) {
-      await UserHasPermission.bulkCreate(
-        permissions.map(p => ({ userId, permissionId: p.permissionId, effect: p.effect, scopeType: 'global' as const, scopeId: null })),
-        { ignoreDuplicates: true },
-      );
+      await prisma.userHasPermission.createMany({
+        data: permissions.map(p => ({ userId, permissionId: Number(p.permissionId), effect: p.effect, scopeType: 'global' as const, scopeId: null })),
+        skipDuplicates: true,
+      });
     }
     return userPermissionService.getUserPermissions(userId);
   },

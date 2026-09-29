@@ -1,6 +1,7 @@
-import { Op } from 'sequelize';
-import { Role, UserHasRole } from '../models/index';
+import prisma from '../lib/prisma';
+import { Prisma } from '../generated/prisma/client';
 import { throwError } from '../helpers/throwError';
+import { modelData } from '../helpers/modelData';
 
 interface RoleBody extends Record<string, unknown> {
   name?: string;
@@ -12,28 +13,28 @@ interface RoleBody extends Record<string, unknown> {
 }
 
 const roleService = {
-  getRoles: async (): Promise<Role[]> =>
-    Role.findAll({ where: { slug: { [Op.ne]: 'super-admin' } }, order: [['name', 'ASC']] }),
+  getRoles: async () =>
+    prisma.role.findMany({ where: { slug: { not: 'super-admin' } }, orderBy: { name: 'asc' } }),
 
-  getRole: async (id: number): Promise<Role> => {
-    const role = await Role.findByPk(id);
+  getRole: async (id: number) => {
+    const role = await prisma.role.findUnique({ where: { id } });
     if (!role) throwError('Role not found', 404);
     return role!;
   },
 
-  getAssignableRoles: async (): Promise<Role[]> =>
-    Role.findAll({ where: { isActive: true, slug: { [Op.ne]: 'super-admin' } }, order: [['name', 'ASC']] }),
+  getAssignableRoles: async () =>
+    prisma.role.findMany({ where: { isActive: true, slug: { not: 'super-admin' } }, orderBy: { name: 'asc' } }),
 
-  createRole: async (body: RoleBody): Promise<Role> => {
+  createRole: async (body: RoleBody) => {
     const slug = body.slug || (body.name ? body.name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : undefined);
-    const exists = await Role.findOne({ where: { [Op.or]: [{ name: body.name }, { slug }] } });
+    const exists = await prisma.role.findFirst({ where: { OR: [{ name: body.name }, { slug }] } });
     if (exists) throwError('Role already exists', 409);
     const isSystem = body.roleType === 'secondary';
-    return Role.create({ ...body, slug, isSystem } as Parameters<typeof Role.create>[0]);
+    return prisma.role.create({ data: { ...modelData(Prisma.RoleScalarFieldEnum, body), slug, isSystem } as Prisma.RoleCreateInput });
   },
 
-  updateRole: async (id: number, body: RoleBody): Promise<Role> => {
-    const role = await Role.findByPk(id);
+  updateRole: async (id: number, body: RoleBody) => {
+    const role = await prisma.role.findUnique({ where: { id } });
     if (!role) throwError('Role not found', 404);
     if (role!.roleType === 'primary' && body.roleType && body.roleType !== 'primary') throwError('Cannot change roleType of a primary role', 403);
     const dupConditions = [
@@ -41,19 +42,19 @@ const roleService = {
       ...(body.slug !== undefined ? [{ slug: body.slug }] : []),
     ];
     if (dupConditions.length) {
-      const dup = await Role.findOne({ where: { [Op.or]: dupConditions, id: { [Op.ne]: id } } });
+      const dup = await prisma.role.findFirst({ where: { OR: dupConditions, id: { not: id } } });
       if (dup) throwError('Role name or slug already exists', 409);
     }
     const isSystem = body.roleType !== undefined ? body.roleType === 'secondary' : role!.isSystem;
-    return role!.update({ ...body, isSystem });
+    return prisma.role.update({ where: { id }, data: { ...modelData(Prisma.RoleScalarFieldEnum, body), isSystem } });
   },
 
-  deleteRole: async (id: number): Promise<Role> => {
-    const role = await Role.findByPk(id);
+  deleteRole: async (id: number) => {
+    const role = await prisma.role.findUnique({ where: { id } });
     if (!role) throwError('Role not found', 404);
     if (role!.isSystem) throwError('System roles cannot be deleted', 403);
-    await UserHasRole.destroy({ where: { roleId: id } });
-    await role!.destroy();
+    await prisma.userHasRole.deleteMany({ where: { roleId: id } });
+    await prisma.role.delete({ where: { id } });
     return role!;
   },
 };

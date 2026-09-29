@@ -1,8 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { connectDB } from '../config/db';
-import sequelize from '../config/sequelize';
+import { connectDB, prisma } from '../config/db';
 import { tasks } from './kernel';
 
 const [,, signature] = process.argv;
@@ -30,6 +29,6 @@ const [,, signature] = process.argv;
     console.error('[CronRunner] Failed:', (err as Error).message);
     process.exit(1);
   } finally {
-    await sequelize.close();
+    await prisma.$disconnect();
   }
 })();

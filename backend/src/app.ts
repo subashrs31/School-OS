@@ -10,7 +10,6 @@ import errorHandler from './middleware/error.middleware';
 import notFound from './middleware/notFound.middleware';
 import { connectDB } from './config/db';
 import env from './config/appConfig';
-import passport from './config/passport';
 import { globalLimiter, authLimiter, getCorsOptions } from './config/security';
 import apiResponse from './helpers/apiResponse';
 import logger from './utils/logger';
@@ -29,7 +28,6 @@ app.use(cors(getCorsOptions(env.ALLOWED_ORIGINS)));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
-app.use(passport.initialize());
 
 app.use(`/${env.FILE_UPLOAD_FOLDER}`, express.static(path.join(__dirname, '../public', env.FILE_UPLOAD_FOLDER)));
 app.use(`/${env.FILE_UPLOAD_FOLDER}`, (_req: Request, res: Response) => res.status(404).end());

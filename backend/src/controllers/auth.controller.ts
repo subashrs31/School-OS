@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import authService from '../services/auth.service';
 import authorizationService from '../services/authorization.service';
-import { User, UserOrganization, Organization, Branch } from '../models/index';
+import prisma from '../lib/prisma';
 import env from '../config/appConfig';
 import { setCookies, clearCookies, setCsrfCookie, clearCsrfCookie } from '../helpers/cookies';
 import apiResponse from '../helpers/apiResponse';
@@ -74,20 +74,6 @@ const authController = {
     } catch (error) { next(error); }
   },
 
-  oauthCallback: async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { provider, profile } = req.user as unknown as { provider: string; profile: { oauthId: string; email: string; name: string } };
-      const oauthService = (await import('../services/oauth.service')).default;
-      const { accessToken, refreshToken } = await oauthService.handleOAuthUser(provider, profile, req);
-      setCookies(res, 'accessToken', accessToken, env.ACCESS_TOKEN_EXPIRE);
-      setCookies(res, 'refreshToken', refreshToken, env.REFRESH_TOKEN_EXPIRE);
-      setCsrfCookie(req, res);
-      res.redirect(`${env?.FRONTEND_URL}/#/oauth/success`);
-    } catch (error) {
-      res.redirect(`${env.FRONTEND_URL}/#/oauth/error?message=${encodeURIComponent((error as Error).message)}`);
-    }
-  },
-
   forgotPassword: async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await authService.forgotPasswordService((req.body as { email: string }).email);
@@ -113,18 +99,18 @@ const authController = {
     try {
       const userId = (req.user as AppUser | undefined)?.userId;
       if (!userId) { apiResponse.error(res, 'Unauthorized', null, 401); return; }
-      const user = await User.findByPk(userId);
+      const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user || user.deletedAt) { apiResponse.error(res, 'User not found', null, 404); return; }
       if (!user.isActive) { apiResponse.error(res, 'Account inactive', null, 403); return; }
       const [roles, permissions, orgAssignments] = await Promise.all([
         authorizationService.getUserRoles(userId),
         authorizationService.getEffectivePermissions(userId),
-        UserOrganization.findAll({
+        prisma.userOrganization.findMany({
           where: { userId, isActive: true },
-          include: [
-            { model: Organization, attributes: ['id', 'name', 'slug'] },
-            { model: Branch,       attributes: ['id', 'name'] },
-          ],
+          include: {
+            Organization: { select: { id: true, name: true, slug: true } },
+            Branch:       { select: { id: true, name: true } },
+          },
         }),
       ]);
       apiResponse.success(res, 'Authenticated user fetched successfully', {

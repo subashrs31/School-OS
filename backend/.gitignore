@@ -21,3 +21,5 @@ logs
 .DS_Store
 .zencoder
 .zenflow
+# Prisma generated client
+src/generated/

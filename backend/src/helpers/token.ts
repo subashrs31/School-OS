@@ -1,7 +1,6 @@
 import jwt, { Algorithm, SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
 import { TokenPayload } from '../types';
-import { parseExpireToMs } from './parse';
 
 export { parseExpireToMs } from './parse';
 

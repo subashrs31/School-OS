@@ -3,6 +3,10 @@ import { Request } from 'express';
 declare global {
   namespace Express {
     interface User extends AppUser {}
+    // Previously declared by @types/passport (removed with OAuth); set by the authCheck middleware.
+    interface Request {
+      user?: User;
+    }
   }
 }
 
@@ -64,13 +68,6 @@ export interface MailOptions {
 
 export interface JobPayload {
   [key: string]: unknown;
-}
-
-export interface OAuthProfile {
-  oauthId: string;
-  email: string;
-  name: string;
-  role?: string;
 }
 
 export interface ExcelColumn {

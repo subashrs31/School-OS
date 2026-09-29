@@ -7,11 +7,7 @@ const envSchema = Joi.object({
   ALLOWED_ORIGINS: Joi.string().required(),
   NODE_ENV: Joi.string().valid('local', 'dev', 'uat', 'qa', 'staging', 'prod').default('local'),
 
-  DB_HOST: Joi.string().default('localhost'),
-  DB_PORT: Joi.number().port().default(3306),
-  DB_NAME: Joi.string().required(),
-  DB_USER: Joi.string().required(),
-  DB_PASSWORD: Joi.string().allow('').default(''),
+  DATABASE_URL: Joi.string().uri({ scheme: ['postgresql', 'postgres'] }).required(),
 
   JWT_SECRET: Joi.string().min(16).required(),
   JWT_ALGORITHM: Joi.string().default('HS256'),
@@ -47,13 +43,6 @@ const envSchema = Joi.object({
   OTP_EXPIRY: Joi.alternatives().try(Joi.string(), Joi.number()).optional(),
   OTP_MAX_ATTEMPTS: Joi.number().integer().optional(),
 
-  OAUTH_PROVIDERS: Joi.string().optional(),
-  GOOGLE_CLIENT_ID: Joi.string().optional(),
-  GOOGLE_CLIENT_SECRET: Joi.string().optional(),
-  GOOGLE_CALLBACK_URL: Joi.string().uri().optional(),
-  MICROSOFT_CLIENT_ID: Joi.string().optional(),
-  MICROSOFT_CLIENT_SECRET: Joi.string().optional(),
-  MICROSOFT_CALLBACK_URL: Joi.string().uri().optional(),
 }).unknown();
 
 const { error, value } = envSchema.validate(process.env);
@@ -68,11 +57,7 @@ export interface AppConfig {
   NODE_ENV: string;
   FRONTEND_URL: string;
   ALLOWED_ORIGINS: string[];
-  DB_HOST: string;
-  DB_PORT: number;
-  DB_NAME: string;
-  DB_USER: string;
-  DB_PASSWORD: string;
+  DATABASE_URL: string;
   JWT_SECRET: string;
   JWT_ALGORITHM: string;
   JWT_REFRESH_SECRET: string;
@@ -102,13 +87,6 @@ export interface AppConfig {
   OTP_LENGTH: number;
   OTP_EXPIRY: number;
   OTP_MAX_ATTEMPTS: number;
-  OAUTH_PROVIDERS: string[];
-  GOOGLE_CLIENT_ID?: string;
-  GOOGLE_CLIENT_SECRET?: string;
-  GOOGLE_CALLBACK_URL?: string;
-  MICROSOFT_CLIENT_ID?: string;
-  MICROSOFT_CLIENT_SECRET?: string;
-  MICROSOFT_CALLBACK_URL?: string;
   LOG_TYPE: 'daily' | 'single';
   LOG_RETENTION_DAYS: number;
   FILE_SIZE_LIMIT:    number;
@@ -121,11 +99,7 @@ const env: AppConfig = {
   FRONTEND_URL: (value.FRONTEND_URL as string).replace(/\/$/, ''),
   ALLOWED_ORIGINS: (value.ALLOWED_ORIGINS as string).split(',').map((o: string) => o.trim()),
 
-  DB_HOST: value.DB_HOST,
-  DB_PORT: value.DB_PORT,
-  DB_NAME: value.DB_NAME,
-  DB_USER: value.DB_USER,
-  DB_PASSWORD: value.DB_PASSWORD,
+  DATABASE_URL: value.DATABASE_URL,
 
   JWT_SECRET: value.JWT_SECRET,
   JWT_ALGORITHM: value.JWT_ALGORITHM ?? 'HS256',
@@ -161,13 +135,6 @@ const env: AppConfig = {
   OTP_EXPIRY:      parseExpireToMs(value.OTP_EXPIRY ?? '5m'),
   OTP_MAX_ATTEMPTS: value.OTP_MAX_ATTEMPTS ?? 5,
 
-  OAUTH_PROVIDERS: value.OAUTH_PROVIDERS ? (value.OAUTH_PROVIDERS as string).split(',').map((p: string) => p.trim()) : [],
-  GOOGLE_CLIENT_ID: value.GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET: value.GOOGLE_CLIENT_SECRET,
-  GOOGLE_CALLBACK_URL: value.GOOGLE_CALLBACK_URL,
-  MICROSOFT_CLIENT_ID: value.MICROSOFT_CLIENT_ID,
-  MICROSOFT_CLIENT_SECRET: value.MICROSOFT_CLIENT_SECRET,
-  MICROSOFT_CALLBACK_URL: value.MICROSOFT_CALLBACK_URL,
 
   LOG_TYPE: 'daily',
   LOG_RETENTION_DAYS: 15,

@@ -31,7 +31,7 @@ flowchart LR
 
 1. **New application** in the `license-server/` folder of this repository (originally planned as its own
    repository; moved into one repository by ADR-006): Node 24, TypeScript (ESM), Express 4, `oidc-provider` 9.12.x
-   (MIT), Prisma 7.10.x, PostgreSQL 16 with its own database. Deployed separately.
+   (MIT), Prisma 7.10.x, PostgreSQL 18 with its own database. Deployed separately.
 2. **Flow:** OIDC Authorization Code + PKCE. **The backend is a confidential client acting as a
    backend-for-frontend (BFF):** it runs the code exchange with `openid-client` 6.8.x, keeps access/refresh tokens
    server-side, and gives the SPA an HttpOnly, SameSite session cookie plus the CSRF cookie. No token reaches browser
@@ -60,7 +60,8 @@ flowchart LR
    (OAuth client-credentials, scope `identities:provision`) to find or create the identity and add a `tenant_users`
    row; the license server emails the set-password link. On first sign-in the backend links `identity_subject` to the
    staff/guardian/student record and activates the role assignment.
-8. **Removed from the backend:** password login, register, forgot/reset, bcrypt, passport and strategies, OAuth,
+8. **Removed from the backend** (OAuth, passport and `user_oauth_accounts` already removed in 2.0-P on 2026-09-30; the
+   rest in Phase 4): password login, register, forgot/reset, bcrypt, passport and strategies, OAuth,
    JWT signing, `user_oauth_accounts`, `src/database/resetPasswords.ts`, OTP helpers (moved to the license server if needed).
 
 ## Alternatives considered (owner reviewed 2026-09-30)

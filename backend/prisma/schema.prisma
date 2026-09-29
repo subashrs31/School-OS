@@ -1,0 +1,671 @@
+// Port of the former MySQL/Sequelize schema (src/database/migrations 20250101000000 and 20250102000000),
+// table-for-table and column-for-column. Relation field names match the Sequelize association aliases
+// because API responses (and the frontend) use them: Staff.User, Staff.Designation, Class.Sections, ...
+// `user_oauth_accounts` is intentionally not ported (OAuth removed, ADR-005).
+// Migrations are created and applied by the project owner only — see docs/prisma-migrations.md.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum RoleType {
+  primary
+  secondary
+  normal
+}
+
+enum ScopeType {
+  global
+  organization
+}
+
+enum PermissionEffect {
+  allow
+  deny
+}
+
+enum JobStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+enum StaffStatus {
+  active
+  inactive
+  on_leave
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum StudentStatus {
+  active
+  inactive
+  transferred
+  graduated
+}
+
+enum EnrollmentStatus {
+  active
+  transferred
+  completed
+  dropped
+}
+
+enum SubjectType {
+  theory
+  practical
+  both
+}
+
+enum ExamType {
+  unit_test
+  midterm
+  final
+  other
+}
+
+// ── Identity & access ─────────────────────────────────────────────────────────
+
+model User {
+  id                      Int       @id @default(autoincrement())
+  uuid                    String    @unique(map: "users_uuid_unique") @db.VarChar(255)
+  name                    String?   @db.VarChar(255)
+  email                   String?   @unique(map: "users_email_unique") @db.VarChar(255)
+  password                String?   @db.VarChar(255)
+  pwdResetStatus          Boolean?  @default(false)
+  lastLogin               DateTime?
+  createdById             Int?
+  verificationTokenHash   String?   @db.VarChar(255)
+  verificationTokenExpiry DateTime?
+  resetTokenHash          String?   @db.VarChar(255)
+  resetTokenExpiry        DateTime?
+  verifiedAt              DateTime?
+  isActive                Boolean?  @default(true)
+  deletedAt               DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  UserHasRoles       UserHasRole[]
+  UserHasPermissions UserHasPermission[]
+  Notifications      Notification[]
+  UserOrganizations  UserOrganization[]
+  Staffs             Staff[]
+  enteredMarks       Mark[]              @relation("MarkEnteredBy")
+
+  @@map("users")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  slug        String   @unique(map: "roles_slug_unique") @db.VarChar(255)
+  description String?  @default("") @db.VarChar(255)
+  roleType    RoleType @default(normal)
+  isSystem    Boolean? @default(false)
+  isActive    Boolean? @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  UserHasRoles       UserHasRole[]
+  RoleHasPermissions RoleHasPermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  slug        String   @db.VarChar(255)
+  resource    String   @db.VarChar(255)
+  action      String   @db.VarChar(255)
+  description String?  @default("") @db.VarChar(255)
+  isSystem    Boolean? @default(false)
+  isActive    Boolean? @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  UserHasPermissions UserHasPermission[]
+  RoleHasPermissions RoleHasPermission[]
+
+  @@unique([resource, action], map: "permissions_resource_action")
+  @@map("permissions")
+}
+
+model UserHasRole {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  roleId     Int
+  isActive   Boolean?  @default(true)
+  expiresAt  DateTime?
+  scopeType  ScopeType @default(global)
+  scopeId    Int?
+  assignedBy Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, scopeType, scopeId], map: "user_has_roles_userid_roleid_scope")
+  @@map("user_has_roles")
+}
+
+model RoleHasPermission {
+  id           Int      @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  Role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  Permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId], map: "role_has_permissions_roleid_permissionid")
+  @@map("role_has_permissions")
+}
+
+model UserHasPermission {
+  id           Int              @id @default(autoincrement())
+  userId       Int
+  permissionId Int
+  effect       PermissionEffect
+  scopeType    ScopeType?       @default(global)
+  scopeId      Int?
+  expiresAt    DateTime?
+  assignedBy   Int?
+  remarks      String?          @default("") @db.VarChar(255)
+  isActive     Boolean?         @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId, scopeType, scopeId], map: "user_has_permissions_userid_permissionid_scope")
+  @@map("user_has_permissions")
+}
+
+// ── Platform ──────────────────────────────────────────────────────────────────
+
+model Notification {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  title      String    @db.VarChar(255)
+  message    String    @db.Text
+  type       String?   @default("info") @db.VarChar(255)
+  readAt     DateTime?
+  navigateTo String?   @db.VarChar(255)
+  data       Json?     @default("{}")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Job {
+  id          Int        @id @default(autoincrement())
+  name        String     @db.VarChar(255)
+  payload     Json?      @default("{}")
+  priority    Int?       @default(2)
+  status      JobStatus? @default(pending)
+  attempts    Int?       @default(0)
+  maxAttempts Int?       @default(3)
+  error       String?    @db.Text
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("jobs")
+}
+
+model FailedJob {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  payload     Json?     @default("{}")
+  priority    Int?      @default(2)
+  attempts    Int?      @default(0)
+  maxAttempts Int?      @default(3)
+  error       String?   @db.Text
+  failedAt    DateTime? @default(now())
+  retryAfter  DateTime?
+  resolved    Boolean?  @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("failed_jobs")
+}
+
+// ── Tenancy ───────────────────────────────────────────────────────────────────
+
+model Organization {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(255)
+  slug         String   @unique(map: "organizations_slug_unique") @db.VarChar(255)
+  logo         String?  @db.VarChar(255)
+  website      String?  @db.VarChar(255)
+  email        String?  @db.VarChar(255)
+  mobile       String?  @db.VarChar(255)
+  schoolTiming String?  @db.VarChar(255)
+  address      String?  @db.Text
+  socialLinks  Json?    @default("{}")
+  isActive     Boolean? @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  Branches                   Branch[]
+  UserOrganizations          UserOrganization[]
+  Designations               Designation[]
+  Staffs                     Staff[]
+  Students                   Student[]
+  AcademicYears              AcademicYear[]
+  Classes                    Class[]
+  Subjects                   Subject[]
+  StudentAcademicEnrollments StudentAcademicEnrollment[]
+  ClassTeacherAssignments    ClassTeacherAssignment[]
+  SubjectTeacherAssignments  SubjectTeacherAssignment[]
+  Exams                      Exam[]
+  Marks                      Mark[]
+
+  @@map("organizations")
+}
+
+model Branch {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  name           String   @db.VarChar(255)
+  code           String?  @db.VarChar(255)
+  address        String?  @db.Text
+  email          String?  @db.VarChar(255)
+  mobile         String?  @db.VarChar(255)
+  timing         String?  @db.VarChar(255)
+  isActive       Boolean? @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  UserOrganizations          UserOrganization[]
+  Staffs                     Staff[]
+  Classes                    Class[]
+  StudentAcademicEnrollments StudentAcademicEnrollment[]
+  ClassTeacherAssignments    ClassTeacherAssignment[]
+  SubjectTeacherAssignments  SubjectTeacherAssignment[]
+  Exams                      Exam[]
+  Marks                      Mark[]
+
+  @@index([organizationId], map: "branches_organization_id")
+  @@map("branches")
+}
+
+model UserOrganization {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  organizationId Int
+  branchId       Int?
+  isPrimary      Boolean? @default(false)
+  isActive       Boolean? @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  User         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([userId, organizationId], map: "user_organizations_user_org")
+  @@index([organizationId], map: "user_organizations_org_id")
+  @@index([branchId], map: "user_organizations_branch_id")
+  @@map("user_organizations")
+}
+
+// ── People ────────────────────────────────────────────────────────────────────
+
+model Designation {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  name           String   @db.VarChar(255)
+  description    String?  @default("") @db.VarChar(255)
+  isActive       Boolean? @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Staffs       Staff[]
+
+  @@index([organizationId], map: "designations_organization_id")
+  @@map("designations")
+}
+
+model Staff {
+  id             Int          @id @default(autoincrement())
+  userId         Int
+  organizationId Int
+  branchId       Int?
+  designationId  Int?
+  employeeCode   String?      @db.VarChar(255)
+  joiningDate    DateTime?    @db.Date
+  status         StaffStatus? @default(active)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  User         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  Designation  Designation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
+
+  ClassTeacherAssignments   ClassTeacherAssignment[]
+  SubjectTeacherAssignments SubjectTeacherAssignment[]
+
+  @@unique([userId, organizationId], map: "staff_user_org_unique")
+  @@index([organizationId], map: "staff_organization_id")
+  @@index([branchId], map: "staff_branch_id")
+  @@map("staff")
+}
+
+model Student {
+  id             Int            @id @default(autoincrement())
+  organizationId Int
+  admissionNo    String         @db.VarChar(255)
+  name           String         @db.VarChar(255)
+  dateOfBirth    DateTime?      @db.Date
+  gender         Gender?
+  photo          String?        @db.VarChar(255)
+  email          String?        @db.VarChar(255)
+  mobile         String?        @db.VarChar(255)
+  address        String?        @db.Text
+  admissionDate  DateTime?      @db.Date
+  status         StudentStatus? @default(active)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  Organization               Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  StudentAcademicEnrollments StudentAcademicEnrollment[]
+  Marks                      Mark[]
+
+  @@unique([organizationId, admissionNo], map: "students_org_admission_unique")
+  @@index([organizationId], map: "students_organization_id")
+  @@map("students")
+}
+
+// ── Academics ─────────────────────────────────────────────────────────────────
+
+model AcademicYear {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  name           String   @db.VarChar(255)
+  startDate      DateTime @db.Date
+  endDate        DateTime @db.Date
+  isCurrent      Boolean? @default(false)
+  isActive       Boolean? @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Organization               Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Classes                    Class[]
+  ClassSubjects              ClassSubject[]
+  StudentAcademicEnrollments StudentAcademicEnrollment[]
+  ClassTeacherAssignments    ClassTeacherAssignment[]
+  SubjectTeacherAssignments  SubjectTeacherAssignment[]
+  Exams                      Exam[]
+
+  @@index([organizationId], map: "academic_years_organization_id")
+  @@map("academic_years")
+}
+
+model Class {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  branchId       Int?
+  academicYearId Int?
+  name           String   @db.VarChar(255)
+  displayOrder   Int?     @default(0)
+  isActive       Boolean? @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Branch       Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  AcademicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+
+  Sections                   Section[]
+  ClassSubjects              ClassSubject[]
+  StudentAcademicEnrollments StudentAcademicEnrollment[]
+  ClassTeacherAssignments    ClassTeacherAssignment[]
+  SubjectTeacherAssignments  SubjectTeacherAssignment[]
+  ExamSubjects               ExamSubject[]
+  Marks                      Mark[]
+
+  @@index([organizationId], map: "classes_organization_id")
+  @@index([branchId], map: "classes_branch_id")
+  @@map("classes")
+}
+
+model Section {
+  id        Int      @id @default(autoincrement())
+  classId   Int
+  name      String   @db.VarChar(255)
+  capacity  Int?
+  isActive  Boolean? @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  Class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  StudentAcademicEnrollments StudentAcademicEnrollment[]
+  ClassTeacherAssignments    ClassTeacherAssignment[]
+  SubjectTeacherAssignments  SubjectTeacherAssignment[]
+  Marks                      Mark[]
+
+  @@index([classId], map: "sections_class_id")
+  @@map("sections")
+}
+
+model Subject {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  code           String?      @db.VarChar(255)
+  name           String       @db.VarChar(255)
+  type           SubjectType? @default(theory)
+  isActive       Boolean?     @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  ClassSubjects             ClassSubject[]
+  SubjectTeacherAssignments SubjectTeacherAssignment[]
+  ExamSubjects              ExamSubject[]
+  Marks                     Mark[]
+
+  @@index([organizationId], map: "subjects_organization_id")
+  @@map("subjects")
+}
+
+model ClassSubject {
+  id             Int      @id @default(autoincrement())
+  classId        Int
+  subjectId      Int
+  academicYearId Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Class        Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  Subject      Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  AcademicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+
+  @@unique([classId, subjectId, academicYearId], map: "class_subjects_unique")
+  @@map("class_subjects")
+}
+
+model StudentAcademicEnrollment {
+  id             Int               @id @default(autoincrement())
+  studentId      Int
+  organizationId Int
+  branchId       Int?
+  academicYearId Int
+  classId        Int
+  sectionId      Int?
+  status         EnrollmentStatus? @default(active)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  Student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  AcademicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  Class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  Section      Section?     @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, academicYearId], map: "sae_student_year_unique")
+  @@index([organizationId], map: "sae_organization_id")
+  @@index([branchId], map: "sae_branch_id")
+  @@index([academicYearId], map: "sae_academic_year_id")
+  @@map("student_academic_enrollments")
+}
+
+model ClassTeacherAssignment {
+  id             Int       @id @default(autoincrement())
+  organizationId Int
+  branchId       Int?
+  staffId        Int
+  classId        Int
+  sectionId      Int?
+  academicYearId Int
+  startDate      DateTime? @db.Date
+  endDate        DateTime? @db.Date
+  isActive       Boolean?  @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  Staff        Staff        @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  Class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  Section      Section?     @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  AcademicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, sectionId, academicYearId], map: "cta_class_section_year_unique")
+  @@index([organizationId], map: "cta_organization_id")
+  @@map("class_teacher_assignments")
+}
+
+model SubjectTeacherAssignment {
+  id             Int       @id @default(autoincrement())
+  organizationId Int
+  branchId       Int?
+  staffId        Int
+  classId        Int
+  sectionId      Int?
+  subjectId      Int
+  academicYearId Int
+  startDate      DateTime? @db.Date
+  endDate        DateTime? @db.Date
+  isActive       Boolean?  @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  Staff        Staff        @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  Class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  Section      Section?     @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  Subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  AcademicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId], map: "sta_organization_id")
+  @@map("subject_teacher_assignments")
+}
+
+// ── Examination ───────────────────────────────────────────────────────────────
+
+model Exam {
+  id             Int       @id @default(autoincrement())
+  organizationId Int
+  branchId       Int?
+  academicYearId Int
+  name           String    @db.VarChar(255)
+  examType       ExamType? @default(other)
+  startDate      DateTime? @db.Date
+  endDate        DateTime? @db.Date
+  isActive       Boolean?  @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  AcademicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  ExamSubjects ExamSubject[]
+  Marks        Mark[]
+
+  @@index([organizationId], map: "exams_organization_id")
+  @@map("exams")
+}
+
+model ExamSubject {
+  id        Int       @id @default(autoincrement())
+  examId    Int
+  classId   Int
+  subjectId Int
+  maxMarks  Decimal?  @db.Decimal(5, 2)
+  passMarks Decimal?  @db.Decimal(5, 2)
+  examDate  DateTime? @db.Date
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  Exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  Class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  Subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, classId, subjectId], map: "exam_subjects_unique")
+  @@map("exam_subjects")
+}
+
+model Mark {
+  id             Int       @id @default(autoincrement())
+  organizationId Int
+  branchId       Int?
+  examId         Int
+  studentId      Int
+  classId        Int
+  sectionId      Int?
+  subjectId      Int
+  marksObtained  Decimal?  @db.Decimal(5, 2)
+  remarks        String?   @db.VarChar(255)
+  enteredBy      Int?
+  enteredAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  Organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Branch        Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  Exam          Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  Student       Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  Class         Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  Section       Section?     @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  Subject       Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  enteredByUser User?        @relation("MarkEnteredBy", fields: [enteredBy], references: [id], onDelete: SetNull)
+
+  @@unique([examId, studentId, subjectId], map: "marks_exam_student_subject_unique")
+  @@index([organizationId], map: "marks_organization_id")
+  @@index([examId], map: "marks_exam_id")
+  @@index([studentId], map: "marks_student_id")
+  @@map("marks")
+}

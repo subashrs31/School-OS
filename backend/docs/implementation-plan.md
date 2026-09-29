@@ -68,15 +68,16 @@ Owns identity, sessions, 2FA, tenants and licenses. Detailed docs in [license-se
 ## Phase 2 — PostgreSQL + Prisma — 🔴
 | # | Sub-phase | Tables (design §) | Status |
 |---|---|---|---|
-| 2.0 | Tooling: docker-compose Postgres, Prisma install, `src/lib/prisma.ts`, test-DB guard, Vitest harness | — | 🔴 |
+| 2.0 | Tooling: Postgres, Prisma install, `src/lib/prisma.ts`, test-DB guard, Vitest harness | — | ✅ done in 2.0-P (local PG 18, no Docker) |
+| **2.0-P** | **Port the backend as-is from MySQL/Sequelize to PostgreSQL/Prisma** (owner has no MySQL, 2026-09-30) | same 26 tables | ✅ [change doc](phases/2.0-port-mysql-to-postgres.md) |
 | **2.1** | **Profile, RBAC & tenancy schema + seed** | users (profile only, ADR-005), roles, permissions, role_has_permissions, user_has_roles, user_has_permissions, organizations, branches, organization_social_links, audit_logs (§3–4) | 🔴 **first BE sub-phase** — spec: `phases/2.1-prisma-foundation.md` |
 | 2.2 | Access workflow tables | invitations, support_sessions (§4.7–4.8), BFF `sessions` | 🔴 |
 | 2.3 | People | designations, departments, staff, staff_branch_assignments, students, guardians, student_guardians (§5) | 🔴 |
 | 2.4 | Academics | academic_years, grade_levels, classes, sections, subjects, class_subjects, enrollments, teaching_assignments (§6–7) | 🔴 |
 | 2.5 | Examination | exams, exam_subjects, marks, mark_corrections (§8) | 🔴 |
 | 2.6 | Constraint SQL (partial uniques, CHECKs) + isolation integration tests | all | 🔴 |
-| 2.7 | Data migration MySQL → Postgres | only if real data exists | ⏸ (dev not deployed; likely not needed — confirm no shared DB holds data) |
-| 2.8 | Remove Sequelize, mysql2, sequelize-cli, `sync({alter})`, bcrypt, passport, `user_oauth_accounts` | — | 🔴 after Phase 5 |
+| 2.7 | Data migration MySQL → Postgres | only if real data exists | ❌ not needed — owner has no MySQL database for this project (2026-09-30) |
+| 2.8 | Remove Sequelize, mysql2, sequelize-cli, `sync({alter})`, bcrypt, passport, `user_oauth_accounts` | — | 🟡 done in 2.0-P except bcrypt (removed with in-app passwords in Phase 4) |
 
 ## Phase 3 — API foundation — 🔴
 | # | Sub-phase | Status |
@@ -93,7 +94,7 @@ Owns identity, sessions, 2FA, tenants and licenses. Detailed docs in [license-se
 | # | Sub-phase | Status |
 |---|---|---|
 | 4.1 | BFF: `/api/v1/auth/login`, `/callback`, `/logout`, `/me`; server-side sessions; JWKS verification; CSRF mounted. Replaces in-app login/refresh/JWT signing | 🔄 |
-| 4.2 | Remove register, forgot/reset, bcrypt, passport, Google/Microsoft OAuth, OTP helpers, `resetPasswords.ts` | 🔄 remove |
+| 4.2 | Remove register, forgot/reset, bcrypt, passport, Google/Microsoft OAuth, OTP helpers, `resetPasswords.ts` | 🟡 passport + OAuth removed in 2.0-P; rest remains |
 | 4.3 | Scoped `authorize()` + `ScopeContext` (ADR-003) | 🔄 |
 | 4.4 | IAM endpoints on Prisma: delegation ceiling, transactional sync, scoped assignments, audit log | 🔄 |
 | 4.5 | Platform namespace + support sessions | 🔴 |
@@ -161,7 +162,8 @@ Full suite: unit, integration, API, contract, PICT, Playwright (browser matrix),
 | 5 | Repositories (revised) | One repository `subashrs31/School-OS` with folders `backend/`, `frontend/`, `license-server/`; fresh history | ADR-006 |
 
 **Still open**
-1. Does any shared MySQL database hold data that must be kept? (Phase 2.7; likely no)
+1. ~~Does any shared MySQL database hold data that must be kept?~~ Answered 2026-09-30: no MySQL at all; backend ported
+   to PostgreSQL 18 (2.0-P).
 2. Login identifier in the license server: email and mobile only, or also keep the current uuid-style codes
    (e.g. `DNSTSA0001`)? (LS-1)
 3. Hosting target (Phase 10).

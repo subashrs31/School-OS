@@ -16,9 +16,13 @@
 - `prisma/schema.prisma` is the single schema source; Prisma Migrate generates SQL migrations, which are reviewed and
   may be hand-edited to add partial indexes and CHECK constraints.
 - One `PrismaClient` singleton in `src/lib/prisma.ts`.
-- Migrate module by module (Phase 2 tables, then Phase 5 services). Sequelize and Prisma coexist only while the
-  MySQL → Postgres cut-over is in progress; there is no dual-write period — services switch in whole modules.
-- `sequelize`, `sequelize-cli`, `mysql2` are removed when the last module is migrated.
+- ~~Migrate module by module (Phase 2 tables, then Phase 5 services). Sequelize and Prisma coexist only while the
+  MySQL → Postgres cut-over is in progress.~~ **Superseded 2026-09-30:** with no MySQL available, the whole data layer
+  was ported at once, as-is (same 26 tables, same API responses), in sub-phase 2.0-P
+  ([change doc](../phases/2.0-port-mysql-to-postgres.md)). The SOS_DATABASE_DESIGN schema now arrives through normal
+  Prisma migrations from sub-phase 2.1 onwards. There is no coexistence period.
+- `sequelize`, `sequelize-cli`, `mysql2` were removed in 2.0-P.
+- Migration process and who runs what: [prisma-migrations.md](../prisma-migrations.md).
 
 ## Alternatives considered
 | Option | Why not |

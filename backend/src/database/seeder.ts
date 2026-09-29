@@ -1,10 +1,16 @@
 import 'dotenv/config';
-import { sequelize } from '../config/db';
-import { User, Role, Permission, UserHasRole, UserHasPermission, RoleHasPermission } from '../models/index';
+import { prisma } from '../config/db';
 import DatabaseSeeder from './seeders/DatabaseSeeder';
 
-const MODELS: Record<string, { truncate: (opts?: object) => Promise<void> }> = {
-  User, Role, Permission, UserHasRole, UserHasPermission, RoleHasPermission,
+// Truncatable models → PostgreSQL tables. The schema itself is managed only by Prisma migrations
+// (the former `sequelize.sync({ alter: true })` is gone — see docs/prisma-migrations.md).
+const MODELS: Record<string, string> = {
+  User: 'users',
+  Role: 'roles',
+  Permission: 'permissions',
+  UserHasRole: 'user_has_roles',
+  UserHasPermission: 'user_has_permissions',
+  RoleHasPermission: 'role_has_permissions',
 };
 
 const SEEDERS: Record<string, { run: () => Promise<void> }> = DatabaseSeeder.seeders.reduce(
@@ -13,14 +19,13 @@ const SEEDERS: Record<string, { run: () => Promise<void> }> = DatabaseSeeder.see
 );
 
 const connect = async (): Promise<void> => {
-  await sequelize.authenticate();
-  await sequelize.sync({ alter: true });
-  console.log('MySQL connected');
+  await prisma.$queryRaw`SELECT 1`;
+  console.log('PostgreSQL connected');
 };
 
 const disconnect = async (): Promise<void> => {
-  await sequelize.close();
-  console.log('MySQL disconnected');
+  await prisma.$disconnect();
+  console.log('PostgreSQL disconnected');
 };
 
 const seedAll = async (): Promise<void> => {
@@ -39,27 +44,28 @@ const seedSpecific = async (names: string[]): Promise<void> => {
   console.log('\nSeeding complete.\n');
 };
 
+// Table names come only from the MODELS map above, never from user input.
+const truncate = (table: string, cascade: boolean) =>
+  prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" RESTART IDENTITY${cascade ? ' CASCADE' : ''}`);
+
 const truncateAll = async (): Promise<void> => {
   console.log('\n--- Truncating all ---');
-  await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-  for (const [name, model] of Object.entries(MODELS)) {
-    await model.truncate({ cascade: true, force: true });
+  for (const [name, table] of Object.entries(MODELS)) {
+    await truncate(table, true);
     console.log(`  ${name}: truncated`);
   }
-  await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
   console.log('Truncate complete.\n');
 };
 
 const truncateModel = async (names: string[]): Promise<void> => {
   console.log('\n--- Truncating specific ---');
-  await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
   for (const name of names) {
-    const model = MODELS[name];
-    if (!model) { console.warn(`Unknown model: "${name}". Available: ${Object.keys(MODELS).join(', ')}`); continue; }
-    await model.truncate({ force: true });
+    const table = MODELS[name];
+    if (!table) { console.warn(`Unknown model: "${name}". Available: ${Object.keys(MODELS).join(', ')}`); continue; }
+    // MySQL ran with FOREIGN_KEY_CHECKS = 0; PostgreSQL needs CASCADE to truncate a referenced table.
+    await truncate(table, true);
     console.log(`  ${name}: truncated`);
   }
-  await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
   console.log('Truncate complete.\n');
 };
 

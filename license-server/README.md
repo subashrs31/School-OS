@@ -18,7 +18,7 @@ through, and the system of record for which schools (tenants) hold an active lic
 
 ## Planned stack
 
-Node 24 · TypeScript (ESM) · Express 4 · `oidc-provider` 9.12.x · Prisma 7.10.x · PostgreSQL 16 (own database) ·
+Node 24 · TypeScript (ESM) · Express 4 · `oidc-provider` 9.12.x · Prisma 7.10.x · PostgreSQL 18 (own database) ·
 Vitest · Playwright (hosted pages).
 
 ## Documentation

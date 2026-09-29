@@ -1,6 +1,7 @@
-import { Op } from 'sequelize';
-import { Permission, RoleHasPermission, UserHasPermission } from '../models/index';
+import prisma from '../lib/prisma';
+import { Prisma } from '../generated/prisma/client';
 import { throwError } from '../helpers/throwError';
+import { modelData } from '../helpers/modelData';
 
 interface PermissionBody extends Record<string, unknown> {
   name?: string;
@@ -13,44 +14,45 @@ interface PermissionBody extends Record<string, unknown> {
 }
 
 const permissionService = {
-  getPermissions: async (): Promise<Permission[]> =>
-    Permission.findAll({ order: [['resource', 'ASC'], ['action', 'ASC']] }),
+  getPermissions: async () =>
+    prisma.permission.findMany({ orderBy: [{ resource: 'asc' }, { action: 'asc' }] }),
 
   getActions: async (): Promise<string[]> =>
     ['view', 'create', 'edit', 'delete', 'import', 'export', 'approve', 'reject'],
 
-  getPermission: async (id: number): Promise<Permission> => {
-    const perm = await Permission.findByPk(id);
+  getPermission: async (id: number) => {
+    const perm = await prisma.permission.findUnique({ where: { id } });
     if (!perm) throwError('Permission not found', 404);
     return perm!;
   },
 
-  createPermission: async (body: PermissionBody): Promise<Permission> => {
-    const exists = await Permission.findOne({ where: { resource: body.resource, action: body.action } });
+  createPermission: async (body: PermissionBody) => {
+    const exists = await prisma.permission.findFirst({ where: { resource: body.resource, action: body.action } });
     if (exists) throwError('Permission already exists for this resource and action', 409);
     const name = body.name?.trim() || `${body.resource}:${body.action}`;
     const slug = `${body.resource}:${body.action}`.toLowerCase().replace(/[^a-z0-9:]/g, '-');
-    return Permission.create({ ...body, name, slug } as Parameters<typeof Permission.create>[0]);
+    return prisma.permission.create({ data: { ...modelData(Prisma.PermissionScalarFieldEnum, body), name, slug } as Prisma.PermissionCreateInput });
   },
 
-  updatePermission: async (id: number, body: PermissionBody): Promise<Permission> => {
-    const perm = await Permission.findByPk(id);
+  updatePermission: async (id: number, body: PermissionBody) => {
+    const perm = await prisma.permission.findUnique({ where: { id } });
     if (!perm) throwError('Permission not found', 404);
     if (perm!.isSystem && body.isSystem === false) throwError('Cannot remove system flag from a system permission', 403);
-    const dup = await Permission.findOne({
-      where: { resource: body.resource, action: body.action, id: { [Op.ne]: id } },
+    // Prisma ignores undefined filters (Sequelize threw on them), so fall back to the stored values.
+    const dup = await prisma.permission.findFirst({
+      where: { resource: body.resource ?? perm!.resource, action: body.action ?? perm!.action, id: { not: id } },
     });
     if (dup) throwError('Permission already exists for this resource and action', 409);
-    return perm!.update(body);
+    return prisma.permission.update({ where: { id }, data: modelData(Prisma.PermissionScalarFieldEnum, body) });
   },
 
-  deletePermission: async (id: number): Promise<Permission> => {
-    const perm = await Permission.findByPk(id);
+  deletePermission: async (id: number) => {
+    const perm = await prisma.permission.findUnique({ where: { id } });
     if (!perm) throwError('Permission not found', 404);
     if (perm!.isSystem) throwError('System permissions cannot be deleted', 403);
-    await RoleHasPermission.destroy({ where: { permissionId: id } });
-    await UserHasPermission.destroy({ where: { permissionId: id } });
-    await perm!.destroy();
+    await prisma.roleHasPermission.deleteMany({ where: { permissionId: id } });
+    await prisma.userHasPermission.deleteMany({ where: { permissionId: id } });
+    await prisma.permission.delete({ where: { id } });
     return perm!;
   },
 };

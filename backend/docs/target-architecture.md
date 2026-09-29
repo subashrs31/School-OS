@@ -27,8 +27,8 @@ flowchart LR
   SPA -->|hosted login pages| LS[license-server<br/>OIDC provider + licensing]
   API -->|OIDC code exchange, JWKS, admin API| LS
   LS -. signed webhooks .-> API
-  API --> PG[(PostgreSQL 16: school DB)]
-  LS --> LPG[(PostgreSQL 16: license DB)]
+  API --> PG[(PostgreSQL 18: school DB)]
+  LS --> LPG[(PostgreSQL 18: license DB)]
   API --> SMTP[SMTP mail]
   LS --> SMTP
   API --> S3[S3 / local storage]

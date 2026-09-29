@@ -1,14 +1,14 @@
-import sequelize from './sequelize';
-import '../models/index';
+import prisma from '../lib/prisma';
+import logger from '../utils/logger';
 
 export const connectDB = async (): Promise<void> => {
   try {
-    await sequelize.authenticate();
-    console.log('MySQL connected successfully');
+    await prisma.$queryRaw`SELECT 1`;
+    logger.info('PostgreSQL connected successfully');
   } catch (err) {
-    console.error('Error connecting to MySQL:', (err as Error).message);
+    logger.error(`Error connecting to PostgreSQL: ${(err as Error).message}`);
     process.exit(1);
   }
 };
 
-export { sequelize };
+export { prisma };

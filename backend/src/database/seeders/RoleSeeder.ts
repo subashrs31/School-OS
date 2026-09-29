@@ -1,6 +1,7 @@
-import { Role } from '../../models/index';
+import prisma from '../../lib/prisma';
+import { RoleType } from '../../generated/prisma/client';
 
-const data = [
+const data: Array<{ name: string; slug: string; roleType: RoleType; isSystem: boolean; description: string }> = [
   { name: 'Super Admin',  slug: 'super-admin',  roleType: 'primary',   isSystem: true,  description: 'Full system access — bypasses all permission checks' },
   { name: 'Admin',        slug: 'admin',        roleType: 'secondary', isSystem: true,  description: 'System admin — permission checks still apply' },
   { name: 'School Admin', slug: 'school-admin', roleType: 'normal',    isSystem: false, description: 'Organization-level admin — manages all branches' },
@@ -12,9 +13,9 @@ const data = [
 
 const run = async (): Promise<void> => {
   for (const r of data) {
-    const exists = await Role.findOne({ where: { slug: r.slug } });
+    const exists = await prisma.role.findFirst({ where: { slug: r.slug } });
     if (exists) { console.log(`  Skipped (exists): ${r.name}`); continue; }
-    await Role.create(r);
+    await prisma.role.create({ data: r });
     console.log(`  Created: ${r.name}`);
   }
 };

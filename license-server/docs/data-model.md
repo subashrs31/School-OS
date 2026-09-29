@@ -1,7 +1,7 @@
 # License server — Data model (Proposed)
 
 > Engine-neutral notation, same legend as `SOS_DATABASE_DESIGN.md` (`ID`, `REF(table)`, `TEXT(n)`, `CHOICE`, `FLAG`,
-> `DATETIME`, `JSON`, **NN** = required). Physical DB: PostgreSQL 16, via Prisma.
+> `DATETIME`, `JSON`, **NN** = required). Physical DB: PostgreSQL 18, via Prisma.
 > **AUDIT** = `created_at` NN · `created_by` · `updated_at` · `updated_by`. **VERSION** = `row_version` NN.
 >
 > Origin: design doc §4.1 identity columns and §9 subscription tables move here (ADR-005). The backend keeps a

@@ -1,4 +1,4 @@
-import { Permission } from '../../models/index';
+import prisma from '../../lib/prisma';
 
 const ACTIONS = ['view', 'create', 'edit', 'delete', 'import', 'export', 'approve', 'reject'] as const;
 type Action = typeof ACTIONS[number];
@@ -18,9 +18,9 @@ const data = RESOURCES.flatMap((resource: Resource) =>
 
 const run = async (): Promise<void> => {
   for (const p of data) {
-    const exists = await Permission.findOne({ where: { resource: p.resource, action: p.action } });
+    const exists = await prisma.permission.findFirst({ where: { resource: p.resource, action: p.action } });
     if (exists) { console.log(`  Skipped (exists): ${p.slug}`); continue; }
-    await Permission.create({ ...p, isSystem: true });
+    await prisma.permission.create({ data: { ...p, isSystem: true } });
     console.log(`  Created: ${p.slug}`);
   }
 };

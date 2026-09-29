@@ -1,4 +1,4 @@
-import { Role, Permission, RoleHasPermission } from '../../models/index';
+import prisma from '../../lib/prisma';
 
 const rolePermissions: Record<string, string[]> = {
   // primary roleType — full bypass, no permission check ever runs, no need to assign anything
@@ -19,12 +19,12 @@ const rolePermissions: Record<string, string[]> = {
   // ],
 };
 
-const assign = async (roleId: number, permissions: Permission[]): Promise<number> => {
+const assign = async (roleId: number, permissionIds: number[]): Promise<number> => {
   let created = 0;
-  for (const perm of permissions) {
-    const exists = await RoleHasPermission.findOne({ where: { roleId, permissionId: perm.id } });
+  for (const permissionId of permissionIds) {
+    const exists = await prisma.roleHasPermission.findFirst({ where: { roleId, permissionId } });
     if (!exists) {
-      await RoleHasPermission.create({ roleId, permissionId: perm.id } as Parameters<typeof RoleHasPermission.create>[0]);
+      await prisma.roleHasPermission.create({ data: { roleId, permissionId } });
       created++;
     }
   }
@@ -32,16 +32,16 @@ const assign = async (roleId: number, permissions: Permission[]): Promise<number
 };
 
 const run = async (): Promise<void> => {
-  const allPermissions = await Permission.findAll();
-  const permissionMap = new Map(allPermissions.map(p => [p.slug as string, p]));
+  const allPermissions = await prisma.permission.findMany({ select: { id: true, slug: true } });
+  const permissionMap = new Map(allPermissions.map(p => [p.slug, p.id]));
 
   for (const [slug, slugList] of Object.entries(rolePermissions)) {
-    const role = await Role.findOne({ where: { slug } });
+    const role = await prisma.role.findFirst({ where: { slug } });
     if (!role) { console.log(`  Role not found, skipping: ${slug}`); continue; }
 
-    const perms = slugList.map(s => permissionMap.get(s)).filter(Boolean) as Permission[];
-    const created = await assign(role.id, perms);
-    console.log(`  [${slug}] Assigned ${created} permissions (${perms.length - created} already existed)`);
+    const permIds = slugList.map(s => permissionMap.get(s)).filter((id): id is number => id !== undefined);
+    const created = await assign(role.id, permIds);
+    console.log(`  [${slug}] Assigned ${created} permissions (${permIds.length - created} already existed)`);
   }
 };
 

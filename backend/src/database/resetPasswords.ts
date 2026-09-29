@@ -1,20 +1,19 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
-import { sequelize } from '../config/db';
-import { User } from '../models/index';
+import { prisma } from '../config/db';
 
 const DEFAULT_PASSWORD = '12345678';
 
 (async () => {
   try {
-    await sequelize.authenticate();
+    await prisma.$queryRaw`SELECT 1`;
     const hash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
-    const [count] = await User.update({ password: hash }, { where: { deletedAt: null }, individualHooks: false });
+    const { count } = await prisma.user.updateMany({ where: { deletedAt: null }, data: { password: hash } });
     console.log(`Done. Reset ${count} users to: ${DEFAULT_PASSWORD}`);
   } catch (err) {
     console.error('Error:', (err as Error).message);
     process.exit(1);
   } finally {
-    await sequelize.close();
+    await prisma.$disconnect();
   }
 })();

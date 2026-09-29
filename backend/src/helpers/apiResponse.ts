@@ -1,8 +1,9 @@
 import { Response } from 'express';
+import { serializeForJson } from './serialize';
 
 const apiResponse = {
   success: (res: Response, message = 'Success', data: unknown = null, statusCode = 200): Response => {
-    return res.status(statusCode).json({ success: true, message, data, code: statusCode });
+    return res.status(statusCode).json({ success: true, message, data: serializeForJson(data), code: statusCode });
   },
   error: (
     res: Response,
