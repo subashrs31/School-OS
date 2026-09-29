@@ -1,0 +1,17 @@
+# PICT model — role assignment scope validity (sub-phase 2.1, reused in 4.3)
+# Generate: pict tenancy-and-access.txt > tenancy-and-access.generated.tsv
+# Layer mapping:
+#   RoleType/ScopeType compatibility  -> unit test (assignment service, Phase 4.4)
+#   ScopeColumns / OrgBranchMatch     -> integration test (DB CHECK + pair FK, Phase 2.1)
+#   AssignmentState                   -> integration (partial unique) + unit (authorize, Phase 4.3)
+# Playwright is NOT used for these rules; UI coverage of grant screens comes in Phase 6.
+
+RoleType:        primary, secondary, normal
+ScopeType:       global, organization, branch
+OrgColumn:       Empty, SchoolA, SchoolB
+BranchColumn:    Empty, BranchOfA, BranchOfB
+AssignmentState: Active, Revoked, Expired, NotYetValid
+
+# No constraints on purpose: malformed combinations (e.g. global scope with an org, a branch of school B
+# with organization school A) are exactly the negative cases the tests must reject, so every pair is kept.
+# Expected outcome per generated row is derived by the test from the rules in SOS_DATABASE_DESIGN.md §4.5.

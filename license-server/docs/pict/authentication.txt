@@ -1,0 +1,21 @@
+# PICT model — sign-in eligibility (LS-1, LS-3, LS-4)
+# Generate: pict authentication.txt > authentication.generated.tsv
+# Expected outcome per row is computed by the test from docs/architecture.md §4 (sign-in eligibility).
+# Layer mapping:
+#   eligibility decision (all parameters)     -> unit test of the eligibility function
+#   Credential + LockState + MfaState         -> API test against the interaction endpoints
+#   a handful of representative rows          -> Playwright (hosted pages), not every row
+
+Plane:           platform, school
+IdentityStatus:  INVITED, ACTIVE, LOCKED, DISABLED
+Credential:      correct, wrong, empty
+MfaState:        none, confirmed_valid_code, confirmed_reused_code, confirmed_wrong_code
+TenantMembership: none, active, removed
+TenantAdmin:     yes, no
+TenantStatus:    ACTIVE, INACTIVE, SUSPENDED, CLOSED
+LicenseStatus:   TRIAL, ACTIVE, GRACE, EXPIRED, CANCELLED
+
+# Platform identities cannot be tenant members, so tenant parameters are fixed for them.
+IF [Plane] = "platform" THEN [TenantMembership] = "none" AND [TenantAdmin] = "no";
+# Tenant admin flag only exists on a membership row.
+IF [TenantMembership] = "none" THEN [TenantAdmin] = "no";
