@@ -2,10 +2,12 @@
 
 > Snapshot of **`origin/dev`**: backend `school-os-be@e23badf` ("School COnfig", 2026-09-28), frontend
 > `school-os-fe@118e6ec` ("School Config", 2026-09-28). Gathered read-only with `git show`; nothing was run.
+> Those two repositories (and the license-server design) were merged into this single School-OS repository on
+> 2026-09-30 as `backend/`, `frontend/` and `license-server/` (ADR-006). The audit describes the code as it was then.
 >
 > Tags: **[F]** fact read from code · **[H]** hypothesis/inference not executed ·
 > **UNKNOWN — REQUIRES CONFIRMATION** cannot be determined from the repositories.
-> Paths are relative to the repo root named in each section (BE = school-os-be, FE = school-os-fe).
+> Paths are relative to the folder named in each section (BE = `backend/`, FE = `frontend/`).
 
 ---
 
@@ -13,14 +15,14 @@
 
 ```mermaid
 flowchart LR
-  subgraph FE[school-os-fe — React SPA]
+  subgraph FE[frontend — React SPA]
     P[Pages] --> H[TanStack Query hooks]
     H --> S[services/*-service.ts]
     S --> AX[axios-instance<br/>withCredentials]
     P --> RX[Redux: auth, customizer]
   end
   AX -->|HTTPS JSON + HttpOnly cookies| API
-  subgraph BE[school-os-be — Express monolith]
+  subgraph BE[backend — Express monolith]
     API[/api routes/] --> MW[authCheck → authorize(resource.action)]
     MW --> C[controllers] --> SV[services]
     SV --> M[Sequelize models]
@@ -29,7 +31,8 @@ flowchart LR
   SV -. emitter/queue (not wired) .-> Q[jobs / failed_jobs tables]
 ```
 
-- [F] Two repositories: a Vite React SPA and an Express 4 REST API. Single process, layered
+- [F] Two repositories at the time of the audit (now folders of one repository, ADR-006): a Vite React SPA and an
+  Express 4 REST API. Single process, layered
   `routes → controllers → services → models`. No module folders; layers are grouped by type.
 - [F] The FE never touches the DB. All data flows through `/api`.
 - [F] Background pieces exist (`src/queue`, `src/events`, `src/schedule`) but are disabled in
@@ -37,7 +40,7 @@ flowchart LR
 
 ## 2. Current Technology Stack
 
-Frontend stack: see `school-os-fe/docs/current-state.md` §1 (React 19.3, Vite 8.3, TypeScript 6.0, Tailwind 4.3,
+Frontend stack: see [frontend/docs/current-state.md](../../frontend/docs/current-state.md) §1 (React 19.3, Vite 8.3, TypeScript 6.0, Tailwind 4.3,
 Redux Toolkit 2.12, TanStack Query 5.104, axios 1.20, react-router 7.18).
 
 | Layer | Technology (locked version) |
@@ -120,14 +123,14 @@ ADDRESS, `public_id`).
 
 ## 7. Current UI
 
-Moved to the frontend repository: `school-os-fe/docs/current-state.md` §2–§9 (routes, pages, hooks, auth handling,
+Moved to the frontend docs: [frontend/docs/current-state.md](../../frontend/docs/current-state.md) §2–§9 (routes, pages, hooks, auth handling,
 permission-driven UI, performance, technical debt).
 
 ## 8. Current Authentication
 
 - [F] Login by email **or uuid** + bcrypt password (`src/services/auth.service.ts:24-35`).
 - [F] Default `AUTH_BASE=cookie`: HttpOnly `accessToken`/`refreshToken` cookies; `secure` + `SameSite=None` outside
-  local (`src/helpers/cookies.ts`). (FE-side session handling: `school-os-fe/docs/current-state.md` §6.)
+  local (`src/helpers/cookies.ts`). (FE-side session handling: [frontend/docs/current-state.md](../../frontend/docs/current-state.md) §6.)
 - [F] **Token lifetime bug**: expiry is converted to milliseconds and passed as `expiresIn`, which jsonwebtoken reads
   as seconds → access ≈ 13.9 days, refresh ≈ 19 years. Cookie `maxAge` (ms) is correct, which limits cookie mode.
 - [F] Refresh is stateless (jti discarded), no rotation or revocation; `logoutUser` is empty.
@@ -196,7 +199,7 @@ permission-driven UI, performance, technical debt).
 
 - [F] No measurements, budgets or metrics exist. Baseline: **UNKNOWN — REQUIRES CONFIRMATION** (to be measured).
 - [F] BE: 5+ queries per authorized request; JS-side filtering; N+1 import; no pagination.
-- FE performance: `school-os-fe/docs/current-state.md` §8.
+- FE performance: [frontend/docs/current-state.md](../../frontend/docs/current-state.md) §8.
 
 ## 15. Observability
 
@@ -213,12 +216,12 @@ permission-driven UI, performance, technical debt).
 5. `sequelize.sync({ alter: true })` alongside migrations.
 6. Queue keeps pending jobs in memory only; lost on restart.
 7. README is boilerplate text; no project documentation before this Phase 0 set.
-8. FE technical debt: `school-os-fe/docs/current-state.md` §9.
+8. FE technical debt: [frontend/docs/current-state.md](../../frontend/docs/current-state.md) §9.
 
 ## 17. Known Bugs (confirmed in code; not yet reproduced at runtime)
 
 Frontend-owned bugs **B1–B4, B11, B12** (PUT vs PATCH, env base URL, summary counts, `/auth/me` redirect loop,
-single-role save, dead sidebar links) are documented in `school-os-fe/docs/current-state.md` §10. The backend side of
+single-role save, dead sidebar links) are documented in [frontend/docs/current-state.md](../../frontend/docs/current-state.md) §10. The backend side of
 B1 is that school-module update routes are PATCH (`src/routes/branch.routes.ts:11` etc.); of B3, that the controller
 returns `{ organization, summary }` (`src/controllers/organization.controller.ts:25`).
 
@@ -245,7 +248,8 @@ FE screen beyond the current org/IAM pages. Details: `feature-audit.md`.
 - `dev` is **not deployed anywhere**; it runs locally only. (Answers "where is it deployed today".)
 - Google/Microsoft sign-in is **not required**; OAuth code will be removed rather than fixed.
 - Authentication moves to a **separate custom license server** (identity + licenses, OIDC) — see ADR-005.
-- Frontend, backend and license server are **separate repositories**.
+- ~~Frontend, backend and license server are **separate repositories**.~~ **Superseded 2026-09-30:** all three now
+  live in one repository with folders `backend/`, `frontend/`, `license-server/` (ADR-006).
 
 **Still UNKNOWN — REQUIRES CONFIRMATION**
 1. Does any shared MySQL database hold data that must be kept? (Likely not, given the above.)

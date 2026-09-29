@@ -1,18 +1,18 @@
-# school-os-fe documentation
+# frontend documentation
 
 | Document | Purpose |
 |---|---|
 | [current-state.md](current-state.md) | Frontend audit of `origin/dev@118e6ec`: routes, pages, API layer, auth handling, performance, FE-owned bugs |
 | [target-architecture.md](target-architecture.md) | Proposed frontend architecture: redirect sign-in via the backend, feature folders, guards, testing |
 
-Cross-cutting documents live in the backend repository **school-os-be** under `docs/`:
+Cross-cutting documents live in [backend/docs/](../../backend/docs/README.md):
 
 | Document | Purpose |
 |---|---|
-| `current-state.md` | Backend audit, APIs, database, authorization, security, backend bugs |
-| `feature-audit.md` | ✅🟡🔴🔄 status of every module (backend and frontend columns) |
-| `target-architecture.md` | System architecture |
-| `implementation-plan.md` | Phases and sub-phases for all three repositories |
-| `architecture/ADR-001…005` | Architecture decisions (PostgreSQL, Prisma, tenant scoping, testing, license server) |
+| [current-state.md](../../backend/docs/current-state.md) | Backend audit, APIs, database, authorization, security, backend bugs |
+| [feature-audit.md](../../backend/docs/feature-audit.md) | ✅🟡🔴🔄 status of every module (backend and frontend columns) |
+| [target-architecture.md](../../backend/docs/target-architecture.md) | System architecture |
+| [implementation-plan.md](../../backend/docs/implementation-plan.md) | Phases and sub-phases for the backend, frontend and license server |
+| [architecture/](../../backend/docs/architecture/) | ADR-001…006 (PostgreSQL, Prisma, tenant scoping, testing, license server, single repository) |
 
-License server documents live in **school-os-license-server** under `docs/`.
+License server documents live in [license-server/docs/](../../license-server/README.md).

@@ -4,13 +4,13 @@
 **Task type:** New application / architecture
 
 ## 1. Requirement
-Stand up the OpenID Connect provider so school-os-be can sign a user in with authorization code + PKCE, receive a
+Stand up the OpenID Connect provider so backend can sign a user in with authorization code + PKCE, receive a
 JWT access token for `school-os-api`, refresh it with rotating refresh tokens, verify it via JWKS, and sign out.
 
 ## 2. Scope
 **In:** `users`, `oidc_payloads`, `ls_audit_logs` tables; Prisma adapter for `oidc-provider`; provider configuration
 (`architecture.md` §3); `findAccount` with `plane` and `av` claims; a **minimal unstyled** login interaction
-(email + password) sufficient for automated tests; seed of one platform identity and the `school-os-be` client.
+(email + password) sufficient for automated tests; seed of one platform identity and the `school-os-backend` client.
 
 **Out:** styled hosted pages (LS-2, mockup gate), lockout/2FA/reset (LS-3), tenants and licences (LS-4), admin API
 and webhooks (LS-5).
@@ -53,7 +53,7 @@ Scenarios "Successful sign-in", "Refresh token reuse revokes the session", "Sign
 | Unit (Vitest) | claims builder, eligibility function (identity part), adapter mapping |
 | Integration (Vitest + test Postgres) | adapter CRUD and expiry purge, seed idempotency |
 | API (Supertest, full OIDC dance with a test client) | AC1–AC9 |
-| Contract | a test in school-os-be (Phase 4.1) runs the same dance with `openid-client` against a running LS |
+| Contract | a test in the backend (Phase 4.1) runs the same dance with `openid-client` against a running LS |
 | Playwright | not in LS-1 (unstyled page); starts in LS-2 |
 
 TDD order: write the Supertest OIDC-dance tests first (fail: server missing) → implement config/adapter → pass.
@@ -81,4 +81,4 @@ New OIDC endpoints only (`docs/api.md` §1). No admin API yet.
 |---|---|
 | `oidc-provider` major-version API differences | pin 9.12.x; follow its documented configuration; AC tests cover each feature used |
 | Keys committed by accident | JWKS only from env/secret storage; gitleaks in CI; `.env` ignored |
-| school-os-be (CommonJS) cannot load `openid-client`/`jose` (ESM) | ESM/CJS spike in LS-0 (ADR-005 consequence) |
+| The backend (CommonJS) cannot load `openid-client`/`jose` (ESM) | ESM/CJS spike in LS-0 (ADR-005 consequence) |

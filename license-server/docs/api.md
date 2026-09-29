@@ -1,14 +1,14 @@
 # License server — API contract (Proposed)
 
-> Three surfaces: (1) standard OIDC endpoints, (2) the admin API used only by school-os-be, (3) webhooks sent to
-> school-os-be. An OpenAPI file (`docs/api/openapi.yaml`) is generated from these routes in LS-5.
+> Three surfaces: (1) standard OIDC endpoints, (2) the admin API used only by the backend, (3) webhooks sent to
+> backend. An OpenAPI file (`docs/api/openapi.yaml`) is generated from these routes in LS-5.
 > Paths for OIDC endpoints are `oidc-provider` defaults; all others are owned by this service.
 
 ## 1. OIDC endpoints (public)
 
 | Method | Path | Purpose | Notes |
 |---|---|---|---|
-| GET | `/.well-known/openid-configuration` | Discovery | school-os-be reads it at startup |
+| GET | `/.well-known/openid-configuration` | Discovery | the backend reads it at startup |
 | GET | `/jwks` | Public signing keys | Cache-Control set; clients refetch on unknown `kid` |
 | GET | `/auth` | Authorization (code + PKCE S256 + state + nonce + `resource=school-os-api`) | Redirects to `/interaction/:uid` |
 | GET/POST | `/interaction/:uid[/login|/mfa]` | Hosted login and 2FA steps | Server-rendered; CSRF-protected forms |
@@ -18,12 +18,12 @@
 | GET/POST | `/password/forgot`, `/password/reset/:token`, `/password/set/:token` | Hosted password pages | Forgot always answers the same way (no enumeration) |
 
 **Access token (JWT) claims** — `iss`, `aud = school-os-api`, `sub`, `exp`, `iat`, `jti`, `client_id`, `scope`,
-`plane`, `av`, `amr`. school-os-be **must** check `iss`, `aud`, `exp`, algorithm `RS256`.
+`plane`, `av`, `amr`. backend **must** check `iss`, `aud`, `exp`, algorithm `RS256`.
 
 **Errors** follow OIDC/OAuth (`invalid_grant`, `invalid_client`, `access_denied`, `login_required`). Sign-in refusals for
 eligibility return `access_denied` with `error_description` limited to: `account_inactive`, `school_access_inactive`.
 
-## 2. Admin API — `/admin/v1` (school-os-be only)
+## 2. Admin API — `/admin/v1` (the backend only)
 
 Auth: `Authorization: Bearer <client-credentials token>` from `/token` with the listed scope. JSON bodies, validated;
 unknown fields rejected. Responses `{ data }` or `{ error: { code, message } }`. Every call → `ls_audit_logs`.
@@ -46,7 +46,7 @@ them (see `architecture.md` §9).
 Why these are single-record endpoints: invitations provision one person at a time; bulk import (design EXECUTION_ORDER
 user import) will get a dedicated batch route only when that feature is built.
 
-## 3. Webhooks — LS → school-os-be
+## 3. Webhooks — LS → backend
 
 Target: `POST {SCHOOL_OS_API}/api/v1/auth/license-events` (configured per environment).
 
@@ -63,7 +63,7 @@ Delivery: from the `webhook_events` outbox; retries with exponential back-off (1
 the delivery is FAILED and appears in the admin report. The daily reconciliation `GET /admin/v1/tenants?updatedSince=`
 closes any gap.
 
-| Event `type` | Payload | school-os-be action |
+| Event `type` | Payload | Backend action |
 |---|---|---|
 | `tenant.status_changed` | `{ tenantPublicId, from, to, source, reason, occurredAt }` | update `organizations.status`, `status_source`, `status_reason`; `audit_logs` row |
 | `license.expiring` | `{ tenantPublicId, endsOn, daysLeft }` | show renewal banner to school admins |

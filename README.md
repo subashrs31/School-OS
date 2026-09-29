@@ -8,3 +8,4 @@
 
 Each folder is an independent project with its own `package.json`, lockfile, `.env.example` and `docs/`.
 Start with [backend/docs/README.md](backend/docs/README.md) for architecture, the implementation plan and ADRs.
+Why this is one repository with three folders: [ADR-006](backend/docs/architecture/ADR-006-single-repository.md).

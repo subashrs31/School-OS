@@ -14,7 +14,7 @@
 flowchart LR
   P0[0 Current state] --> P1[1 Target architecture + ADRs]
   P1 --> P2[2 Postgres + Prisma]
-  P1 --> LS[LS License server<br/>separate repo]
+  P1 --> LS[LS License server<br/>license-server/]
   P2 --> P3[3 API foundation]
   P3 --> P4[4 Auth integration & authz]
   LS -->|LS-1 OIDC, LS-5 admin API + webhooks| P4
@@ -27,7 +27,7 @@ flowchart LR
 ```
 
 Phases 5 and 6 interleave per module (BE then FE for the same module), as EXECUTION_ORDER.md requires.
-The license server (Phase LS) runs in its own repository in parallel with Phases 2–3.
+The license server (Phase LS) is built in the `license-server/` folder in parallel with Phases 2–3.
 
 ---
 
@@ -53,12 +53,12 @@ replaced anyway:
 | Mass assignment of `organizationId`/`classId` (`branch.service.ts:28` etc.) | 3.2 validation + each Phase 5 module |
 | CSRF not mounted (`csrf.middleware.ts`) | 4.1 BFF session + 6.0 FE header |
 
-## Phase LS — License server (repo `school-os-license-server`, ADR-005) — 🔴
-Owns identity, sessions, 2FA, tenants and licenses. Detailed docs in that repo's `docs/`.
+## Phase LS — License server (folder `license-server/`, ADR-005) — 🔴
+Owns identity, sessions, 2FA, tenants and licenses. Detailed docs in [license-server/docs/](../../license-server/README.md).
 | # | Sub-phase | Status |
 |---|---|---|
 | LS-0 | Scaffold: Node 24 + TS (ESM), Express, Prisma, Postgres (own DB), Vitest, docker-compose; ESM/CJS spike for the BE client libraries | 🔴 |
-| LS-1 | Identity schema + OIDC core (`oidc-provider`: code + PKCE, resource indicator `school-os-api`, JWKS, refresh rotation, end-session) with the school-os-be client registered | 🔴 **first LS sub-phase** — spec in LS repo `docs/phases/LS-1-identity-and-oidc.md` |
+| LS-1 | Identity schema + OIDC core (`oidc-provider`: code + PKCE, resource indicator `school-os-api`, JWKS, refresh rotation, end-session) with the `school-os-backend` client registered | 🔴 **first LS sub-phase** — spec: [LS-1](../../license-server/docs/phases/LS-1-identity-and-oidc.md) |
 | LS-2 | Hosted UI: login, logout, consent-free first-party flow — **mockup + approval gate** | 🔴 |
 | LS-3 | Password policy, lockout, forgot/reset, 2FA (TOTP) for platform users and school admins | 🔴 |
 | LS-4 | Tenants, plans, tenant licenses, entitlements (design §9 moved here); sign-in blocked for inactive tenants | 🔴 |
@@ -157,7 +157,8 @@ Full suite: unit, integration, API, contract, PICT, Playwright (browser matrix),
 | 1 | Is `dev` deployed beyond local? | No | Phase 1.5 dropped |
 | 2 | Google/Microsoft sign-in? | Not needed | OAuth removed (4.2) |
 | 3 | Authentication approach | Custom license server, separate app, identity + licenses, OIDC via `oidc-provider`, School OS only | ADR-005, Phase LS |
-| 4 | Repositories | FE, BE and license server are separate repos; docs split per repo | cross-cutting ADRs stay here |
+| 4 | Repositories | ~~FE, BE and license server are separate repos; docs split per repo~~ — **superseded by #5** | cross-cutting ADRs stay in `backend/docs/` |
+| 5 | Repositories (revised) | One repository `subashrs31/School-OS` with folders `backend/`, `frontend/`, `license-server/`; fresh history | ADR-006 |
 
 **Still open**
 1. Does any shared MySQL database hold data that must be kept? (Phase 2.7; likely no)

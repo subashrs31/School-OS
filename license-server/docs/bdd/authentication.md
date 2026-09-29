@@ -3,9 +3,9 @@
 **Business requirement:** people sign in once, in one place, with strong protection against guessing and theft; a
 school without an active licence cannot be used, except by its admins to renew.
 
-**Actors:** school user, school admin, platform staff, school-os-be (OIDC client), system jobs.
+**Actors:** school user, school admin, platform staff, the backend (OIDC client), system jobs.
 **Layers:** API tests (Supertest on the provider) for protocol rules; Playwright for hosted pages and the full
-redirect journey through school-os-be.
+redirect journey through backend.
 
 ```gherkin
 Feature: Sign in through the license server
@@ -72,7 +72,7 @@ Feature: Sign in through the license server
     And no email is sent
 
   Scenario: Set password from an invitation
-    Given school-os-be provisioned "new@alpha.test" with sendSetPassword = true
+    Given the backend provisioned "new@alpha.test" with sendSetPassword = true
     When the invitee opens the set-password link within 7 days and sets a valid password
     Then the identity becomes ACTIVE
     And the link cannot be used again

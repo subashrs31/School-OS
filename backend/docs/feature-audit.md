@@ -27,8 +27,8 @@
 
 ## Authentication
 
-Target owner for credentials is the **license server** (ADR-005). "LS" = moves to `school-os-license-server`;
-"remove" = deleted from school-os-be without replacement there.
+Target owner for credentials is the **license server** (ADR-005). "LS" = moves to `license-server`;
+"remove" = deleted from the backend without replacement there.
 
 | Feature | BE | FE | Target | Notes |
 |---|---|---|---|---|
