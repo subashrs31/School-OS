@@ -3,7 +3,15 @@
 Identity and licensing service for School OS. It is the OpenID Connect provider every School OS client signs in
 through, and the system of record for which schools (tenants) hold an active license.
 
-**Status:** design only — no code yet. Decision record:
+**Status:** LS-0 scaffold done (Express + TypeScript ESM, `GET /health`, tests). Next: LS-1 (identity + OIDC).
+
+```bash
+npm install
+npm run dev      # http://localhost:4000/health
+npm test
+```
+
+Decision record:
 [ADR-005](../backend/docs/architecture/ADR-005-license-server-oidc.md).
 
 ## Responsibilities
@@ -13,8 +21,9 @@ through, and the system of record for which schools (tenants) hold an active lic
 | Identities: email/mobile, password hash, 2FA, lockout, status | Roles and permissions inside a school (backend) |
 | Sign-in, sessions, refresh tokens, sign-out (OIDC) | School data: branches, staff, students, academics, exams |
 | Tenants (one per school) and who may sign in to each | Invitations workflow (the backend calls this service to provision) |
-| Plans, licenses, entitlements; blocking sign-in for unlicensed tenants | |
-| Hosted pages: login, 2FA, forgot/reset password, set password | |
+| Plans, licenses (incl. the 7-day free trial), entitlements; blocking sign-in for unlicensed tenants | The public sign-up form (it lives in the frontend; this service does the account + trial part, ADR-007) |
+| Hosted pages: login (email or mobile), 2FA, forgot/reset password, set password, parent mobile codes (later) | |
+| Admin UI for platform staff: schools, plans, licences, suspensions, audit | |
 
 ## Planned stack
 

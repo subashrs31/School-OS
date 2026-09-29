@@ -88,6 +88,7 @@ sequenceDiagram
 |---|---|
 | Base path | `/api/v1` (current `/api` kept as alias until the FE switches) |
 | Platform vs school | `/api/v1/platform/...` for platform-plane operations (onboarding, org status, support sessions); `/api/v1/organizations/:orgId/...` for school operations |
+| Public | `/api/v1/public/...` for the few unauthenticated endpoints (self-service school sign-up, ADR-007): Joi-validated, strictly rate-limited, answers that never reveal whether an account exists |
 | Methods | `GET` read, `POST` create/command, `PATCH` partial update, `DELETE` only where design allows; status changes as explicit commands (`PATCH /:id/status`) |
 | Validation | Joi for body, params and query on **every** route; `stripUnknown: true`; `organizationId` never accepted from the body |
 | Lists | `?page&pageSize(≤100)&sort&order&q&status…`; response `meta: { page, pageSize, total }` |

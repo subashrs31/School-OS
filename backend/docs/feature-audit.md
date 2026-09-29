@@ -36,13 +36,13 @@ Target owner for credentials is the **license server** (ADR-005). "LS" = moves t
 | Refresh | 🔄 | 🟡 | LS rotating refresh tokens, held server-side by BE | stateless today; FE skips refresh on `/auth/me` (B4) |
 | Logout | 🔄 | 🟡 | BE session end + LS end-session | BE no-op; header Sign Out has no handler |
 | Me / session bootstrap | ✅ | 🟡 | BE `/auth/me` from profile + RBAC | FE permissions never refreshed after load |
-| Register | 🔄 | 🔴 | remove (accounts come from invitations) | no validator; uuid missing (B7) |
+| Register | 🔄 | 🔴 | replaced by **self-service school sign-up** (ADR-007, 5.16/6.18) + invitations; the user-level `/auth/register` is removed | no validator; uuid missing (B7) |
 | Forgot / reset password | 🔄 | 🔴 | LS | plaintext token, enumeration, email never sent (B13) |
 | OAuth (Google/Microsoft) | 🔄 | 🔴 | **remove** (owner: not required) | broken (`createTokens` missing, no routes) |
 | CSRF | 🔴 | 🔴 | BE (BFF session) + FE header | middleware not mounted |
 | Two-factor (design §4.1) | 🔴 | 🔴 | LS | |
-| Mobile-code login for parents (design §4.1) | 🔴 | 🔴 | LS (later) | twilio/OTP helpers exist, unused |
-| Licensing / subscription (design §9) | 🔴 | 🔴 | LS, drives `organizations.status` via webhook | |
+| Mobile-code login for parents (design §4.1) | 🔴 | 🔴 | LS-8 (after LS-3, owner confirmed) | twilio/OTP helpers exist, unused |
+| Licensing / subscription (design §9) | 🔴 | 🔴 | LS (LS-4), managed in the LS admin UI (LS-7); drives `organizations.status` via webhook; 7-day trial (ADR-007) | |
 
 ## Identity & access (design §4)
 

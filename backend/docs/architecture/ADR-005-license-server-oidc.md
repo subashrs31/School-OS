@@ -83,9 +83,19 @@ flowchart LR
   (the root `docker-compose.yml` will start the license server, API and both databases).
 - **−** Cross-service consistency: `users` in both systems are linked only by `identity_subject`; webhook delivery
   must be idempotent (event id) and retried; reconciliation job required.
-- **−** Module format: `oidc-provider`, `openid-client` and `jose` are ESM-only while the backend compiles to
-  CommonJS. Node 24 can `require()` synchronous ESM; a spike in Phase 2.0 confirms it, otherwise the backend moves
-  to `"module": "nodenext"`.
+- ~~**−** Module format: `oidc-provider`, `openid-client` and `jose` are ESM-only while the backend compiles to
+  CommonJS.~~ **Resolved by the LS-0 spike (2026-09-30):** on Node 24.12 with TypeScript 5.9.3, `jose` 6.2.12 and
+  `openid-client` 6.8.8 load through `require()`; a backend-style TypeScript file (`module: commonjs`, run by
+  `ts-node --transpile-only`) signed and verified an RS256 token with `jose` and loaded `openid-client`; `tsc`
+  type-checks it with `module: commonjs` (the backend's setting) and with `nodenext`, and fails only with `node16`.
+  **No change to the backend's module format is needed.** It relies on `require(esm)`, so the backend needs
+  Node ≥ 22.12 (dev machine: 24.12) — to be pinned in `engines` when Phase 4.1 adds these libraries.
 - **−** Hosted login pages are a new UI surface → mockup and approval gate (LS-2).
 - `SOS_DATABASE_DESIGN.md` §4.1 (`users`) and §9 (subscription tables) are **split** between the two databases as in
   the table above; the design doc should be annotated accordingly (owner's document, not edited here).
+
+## Updates
+- **2026-09-30 — owner decisions:** sign-in is by **email or mobile** + password (no login codes); plans and licences
+  are managed in a **small admin UI inside the license server** (LS-7); schools can **sign themselves up** for a 7-day
+  trial from a page in School OS ([ADR-007](ADR-007-self-service-school-signup.md)); parents get **mobile one-time-code**
+  sign-in after LS-3 (LS-8).

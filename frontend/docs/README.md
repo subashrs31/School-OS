@@ -13,6 +13,6 @@ Cross-cutting documents live in [backend/docs/](../../backend/docs/README.md):
 | [feature-audit.md](../../backend/docs/feature-audit.md) | ✅🟡🔴🔄 status of every module (backend and frontend columns) |
 | [target-architecture.md](../../backend/docs/target-architecture.md) | System architecture |
 | [implementation-plan.md](../../backend/docs/implementation-plan.md) | Phases and sub-phases for the backend, frontend and license server |
-| [architecture/](../../backend/docs/architecture/) | ADR-001…006 (PostgreSQL, Prisma, tenant scoping, testing, license server, single repository) |
+| [architecture/](../../backend/docs/architecture/) | ADR-001…007 (PostgreSQL, Prisma, tenant scoping, testing, license server, single repository, self-service sign-up) |
 
 License server documents live in [license-server/docs/](../../license-server/README.md).

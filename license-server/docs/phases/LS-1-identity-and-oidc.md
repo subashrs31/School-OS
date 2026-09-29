@@ -10,7 +10,7 @@ JWT access token for `school-os-api`, refresh it with rotating refresh tokens, v
 ## 2. Scope
 **In:** `users`, `oidc_payloads`, `ls_audit_logs` tables; Prisma adapter for `oidc-provider`; provider configuration
 (`architecture.md` §3); `findAccount` with `plane` and `av` claims; a **minimal unstyled** login interaction
-(email + password) sufficient for automated tests; seed of one platform identity and the `school-os-backend` client.
+(email or mobile + password — owner decision 2026-09-30, no login codes) sufficient for automated tests; seed of one platform identity and the `school-os-backend` client.
 
 **Out:** styled hosted pages (LS-2, mockup gate), lockout/2FA/reset (LS-3), tenants and licences (LS-4), admin API
 and webhooks (LS-5).

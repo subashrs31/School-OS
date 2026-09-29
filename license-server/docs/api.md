@@ -39,12 +39,20 @@ Rate limit: 60 req/min per client.
 | POST | `/tenants/:publicId/users` | `identities:provision` | `{ sub, isTenantAdmin, sendSetPassword: boolean }` | tenant-user | 201; 409 if already ACTIVE; 422 if plane is PLATFORM |
 | PATCH | `/tenants/:publicId/users/:sub` | `identities:provision` | `{ status?: REMOVED, isTenantAdmin? }` | tenant-user | 200, 404 |
 | POST | `/identities/:sub/disable` | `identities:provision` | `{ reason }` | identity | 200, 404 |
+| POST | `/school-signups` | `signups:create` | `{ tenantPublicId, schoolName, adminName, email?, mobile? }` | `{ tenantPublicId, adminSub, status: PENDING }` — or `{ outcome: TRIAL_ALREADY_USED }` | 202; same body again → same result (idempotent on `tenantPublicId`); 422 if neither contact given |
 
-Licences (plans, create/renew/cancel licence) get their own routes in **LS-4**, after the owner decides who manages
-them (see `architecture.md` §9).
+`/school-signups` (ADR-007) creates the tenant (`PENDING`, `SELF_SERVICE`), finds or creates the admin identity, adds
+it as tenant admin and sends the verify-and-set-password link or SMS code, all in one transaction. The trial licence is
+created when the admin completes verification. `TRIAL_ALREADY_USED` is returned to the backend only; the public page
+never shows it (D2, D3).
 
-Why these are single-record endpoints: invitations provision one person at a time; bulk import (design EXECUTION_ORDER
-user import) will get a dedicated batch route only when that feature is built.
+**Plans and licences are not managed through this API.** Platform staff manage them in the license-server admin UI
+(LS-7, owner decision 2026-09-30). The backend only reads licence status and limits (`GET /tenants/...`) and receives
+changes by webhook.
+
+Why the other endpoints are single-record: invitations provision one person at a time; bulk import (design
+EXECUTION_ORDER user import) will get a dedicated batch route only when that feature is built. `/school-signups` is the
+one combined call, because a half-created sign-up (tenant without admin) must never exist.
 
 ## 3. Webhooks — LS → backend
 
@@ -67,5 +75,5 @@ closes any gap.
 |---|---|---|
 | `tenant.status_changed` | `{ tenantPublicId, from, to, source, reason, occurredAt }` | update `organizations.status`, `status_source`, `status_reason`; `audit_logs` row |
 | `license.expiring` | `{ tenantPublicId, endsOn, daysLeft }` | show renewal banner to school admins |
-| `license.changed` | `{ tenantPublicId, planKey, status, limits }` | refresh cached entitlements/limits |
+| `license.changed` | `{ tenantPublicId, planKey, isTrial, status, endsOn, limits: { branches, students, staff, seats } }` | refresh cached entitlements/limits; enforce limits on create (ADR-007) |
 | `identity.disabled` | `{ sub, reason }` | set local profile DISABLED, bump `access_version` |

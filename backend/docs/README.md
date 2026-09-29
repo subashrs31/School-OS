@@ -9,7 +9,7 @@ this repository) and the backend-specific ones.
 | [feature-audit.md](feature-audit.md) | ✅🟡🔴🔄 status of every module, backend and frontend columns, mapped to EXECUTION_ORDER modules and design tables |
 | [target-architecture.md](target-architecture.md) | Proposed system and backend architecture |
 | [implementation-plan.md](implementation-plan.md) | Phases and sub-phases for the backend, frontend and license server, owner decisions |
-| [architecture/](architecture/) | ADR-001 PostgreSQL · ADR-002 Prisma · ADR-003 tenant scoping & RBAC · ADR-004 testing stack · ADR-005 license server (OIDC) · ADR-006 single repository |
+| [architecture/](architecture/) | ADR-001 PostgreSQL · ADR-002 Prisma · ADR-003 tenant scoping & RBAC · ADR-004 testing stack · ADR-005 license server (OIDC) · ADR-006 single repository · ADR-007 self-service school sign-up |
 | [phases/2.1-prisma-foundation.md](phases/2.1-prisma-foundation.md) | First backend sub-phase specification |
 | [bdd/](bdd/) · [pict/](pict/) | Behaviour scenarios and pairwise models for backend sub-phases |
 

@@ -21,7 +21,8 @@ flowchart LR
   P4 --> P5[5 Business modules 1–15]
   P5 --> P6[6 Frontend per module]
   P6 --> P7[7 Integration]
-  P7 --> P8[8 Performance] --> P9[9 Security hardening] --> P10[10 CI/CD & prod] --> P11[11 Final QA]
+  P7 --> P8[8 Performance] --> P9[9 Security hardening] --> P11[11 Final QA - local app]
+  P11 --> P12[12 Production & external services<br/>CI/CD, hosting, Twilio - runs last]
   P2 -.test DB.-> T[Test harness]
   T -.-> P3 & P4 & P5
 ```
@@ -57,13 +58,15 @@ replaced anyway:
 Owns identity, sessions, 2FA, tenants and licenses. Detailed docs in [license-server/docs/](../../license-server/README.md).
 | # | Sub-phase | Status |
 |---|---|---|
-| LS-0 | Scaffold: Node 24 + TS (ESM), Express, Prisma, Postgres (own DB), Vitest, docker-compose; ESM/CJS spike for the BE client libraries | 🔴 |
+| LS-0 | Scaffold: Node 24 + TS (ESM), Express, Vitest + Supertest, `/health`; ESM/CJS spike for the BE client libraries (Prisma + DBs `license_server` / `license_server_test` start in LS-1, as approved) | ✅ 2026-09-30 — 3 tests; spike: backend needs no module-format change (ADR-005) |
 | LS-1 | Identity schema + OIDC core (`oidc-provider`: code + PKCE, resource indicator `school-os-api`, JWKS, refresh rotation, end-session) with the `school-os-backend` client registered | 🔴 **first LS sub-phase** — spec: [LS-1](../../license-server/docs/phases/LS-1-identity-and-oidc.md) |
 | LS-2 | Hosted UI: login, logout, consent-free first-party flow — **mockup + approval gate** | 🔴 |
-| LS-3 | Password policy, lockout, forgot/reset, 2FA (TOTP) for platform users and school admins | 🔴 |
-| LS-4 | Tenants, plans, tenant licenses, entitlements (design §9 moved here); sign-in blocked for inactive tenants | 🔴 |
-| LS-5 | Admin API (client credentials): provision identity, tenant users, tenant/license status; HMAC webhooks with retries | 🔴 |
-| LS-6 | Hardening: rate limits, audit, key rotation runbook, backups | 🔴 |
+| LS-3 | Password policy, lockout, forgot/reset, 2FA (TOTP) for platform users and school admins; email/SMS verification. **Messages go to the local dev inbox** (`/dev/inbox`); SMTP optional via `MAIL_*`; real SMS in 12.4 | 🔴 |
+| LS-4 | Tenants, plans (incl. the seeded 7-day `trial` plan, ADR-007), tenant licenses, entitlements (design §9 moved here); sign-in blocked for inactive tenants | 🔴 |
+| LS-5 | Admin API (client credentials): provision identity, tenant users, tenant/license status, `school-signups` (ADR-007); HMAC webhooks with retries | 🔴 |
+| LS-6 | Hardening: rate limits, audit (key-rotation runbook and backups moved to 12.3) | 🔴 |
+| LS-7 | **Admin UI** for platform staff: tenants, plans, licences, suspensions, audit (owner decision 2026-09-30) — **mockup + approval gate** | 🔴 |
+| LS-8 | **Parent sign-in with a mobile one-time code** — needs Twilio, so it **moved to 12.4** (owner, 2026-09-30); parents use mobile + password until then | ➡ 12.4 |
 
 ## Phase 2 — PostgreSQL + Prisma — 🔴
 | # | Sub-phase | Tables (design §) | Status |
@@ -121,6 +124,7 @@ Each module = BE (schema → service → controller → route, with tests) then 
 | 5.13 | Enrollments | 🟡🔄 | 5.6, 5.10 |
 | 5.14 | Exams & exam subjects | 🟡 | 5.11, 2.5 |
 | 5.15 | Marks, publication & corrections | 🟡🔄 / 🔴 | 5.13, 5.14 |
+| 5.16 | **Self-service school sign-up** (ADR-007): public `POST /api/v1/public/school-signups`, rate limit, organization + admin profile creation; trial-limit enforcement on branch/student/staff create | 🔴 | 5.1, LS-4, LS-5, 4.6 |
 
 ## Phase 6 — Frontend (per module, after each Phase 5 module)
 Every UI sub-phase: requirements → responsive mockup → **owner approval** → BDD → tests → implement → Playwright.
@@ -130,6 +134,7 @@ Every UI sub-phase: requirements → responsive mockup → **owner approval** �
 | 6.1–6.15 | Screens for modules 5.1–5.15 (EXECUTION_ORDER frontend lists) | 🟡 / 🔴 |
 | 6.16 | Dashboard on real data (replace mock) | 🔴 |
 | 6.17 | Header/user menu, sidebar routes (fix 8 dead links or hide) | 🔴 |
+| 6.18 | Public **sign-up page** `/signup` and trial banner / renewal page (ADR-007) — **mockup + approval gate** | 🔴 |
 
 ## Phase 7 — Integration — 🔴
 End-to-end journeys: onboard school → first admin invited → branches → staff/students → year/classes → enrollment →
@@ -141,12 +146,20 @@ Baseline measurements, then budgets from `target-architecture.md` §8. Dashboard
 ## Phase 9 — Security hardening — 🔴
 Authz review with PICT isolation suite, upload allowlist, dependency + secret scanning, prod config review.
 
-## Phase 10 — CI/CD & production readiness — 🔴
-GitHub Actions gates, Dockerfiles, docker-compose, migration deploy step with backup, health checks, monitoring.
-Hosting target ⏸ owner.
+## Phase 10 — CI/CD & production readiness — ➡ moved to Phase 12 (owner, 2026-09-30)
+The app is built and run **locally** first; all CI/CD, hosting and production work happens in Phase 12, at the very end.
 
-## Phase 11 — Final QA — 🔴
-Full suite: unit, integration, API, contract, PICT, Playwright (browser matrix), regression, security, performance.
+## Phase 11 — Final QA (local app) — 🔴
+Full suite on the local app: unit, integration, API, contract, PICT, Playwright (browser matrix), regression, security,
+performance.
+
+## Phase 12 — Production & external services — 🔴 (runs last)
+| # | Sub-phase | Status |
+|---|---|---|
+| 12.1 | CI/CD: GitHub Actions gates (lint → typecheck → tests on a fresh DB → build → e2e), Dockerfiles, docker-compose | 🔴 |
+| 12.2 | Hosting & deployment: environments, `prisma migrate deploy` with backup, health checks | 🔴 ⏸ hosting target |
+| 12.3 | Production hardening: backups, key-rotation runbook, monitoring and alerting (moved from LS-6 / Phase 10) | 🔴 |
+| **12.4** | **Last stage — Twilio SMS:** real SMS delivery for mobile verification codes (replaces the dev inbox for SMS) and **LS-8 parent one-time-code sign-in** | 🔴 |
 
 ---
 
@@ -160,11 +173,21 @@ Full suite: unit, integration, API, contract, PICT, Playwright (browser matrix),
 | 3 | Authentication approach | Custom license server, separate app, identity + licenses, OIDC via `oidc-provider`, School OS only | ADR-005, Phase LS |
 | 4 | Repositories | ~~FE, BE and license server are separate repos; docs split per repo~~ — **superseded by #5** | cross-cutting ADRs stay in `backend/docs/` |
 | 5 | Repositories (revised) | One repository `subashrs31/School-OS` with folders `backend/`, `frontend/`, `license-server/`; fresh history | ADR-006 |
+| 6 | ADR-001…005 | Approved | status Accepted |
+| 7 | Sign-in identifier | Email or mobile + password; no `DNSTSA0001`-style codes | LS-1 |
+| 8 | Who manages plans and licences | A small admin UI in the license server | LS-7 |
+| 9 | Self-service school sign-up | Yes: page in the frontend; trial starts automatically after the admin verifies email/mobile and sets a password; 7 days; all features, limits 1 branch / 100 students / 20 staff (editable) | ADR-007, 5.16, 6.18, LS-4, LS-5 |
+| 10 | Parents | Mobile one-time-code sign-in after LS-3 | LS-8 (moved to 12.4 by decision 12) |
+| 11 | Target for now | A fully functional app that runs **locally** | Phase 10 → Phase 12 |
+| 12 | SMS / Twilio | Last stage of the last phase; until then SMS codes go to the local dev inbox | 12.4 |
+| 13 | Local message delivery | License-server **dev inbox** page (`/dev/inbox`, local only) for emails and SMS codes | LS-3 |
 
 **Still open**
 1. ~~Does any shared MySQL database hold data that must be kept?~~ Answered 2026-09-30: no MySQL at all; backend ported
    to PostgreSQL 18 (2.0-P).
-2. Login identifier in the license server: email and mobile only, or also keep the current uuid-style codes
-   (e.g. `DNSTSA0001`)? (LS-1)
-3. Hosting target (Phase 10).
+2. ~~Login identifier~~ — answered: email or mobile + password (decision 7).
+3. Hosting target (Phase 12.2 — not needed until the end).
 4. ~~Approve ADR-001…005 and the dependencies they list.~~ Approved 2026-09-30.
+5. ~~Approve ADR-007's detailed design and its proposed defaults D1–D8~~ — **accepted 2026-09-30.**
+6. ~~SMS provider~~ — Twilio, in 12.4 (last stage).
+7. Payment provider (not scheduled; upgrades are done by platform staff in the admin UI until then).
