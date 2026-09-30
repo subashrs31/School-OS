@@ -5,9 +5,15 @@
 
 type Kind = 'Int' | 'Boolean' | 'DateTime' | 'Other';
 
-const INT_NAMES = new Set(['id', 'capacity', 'displayOrder', 'priority', 'attempts', 'maxAttempts', 'assignedBy', 'enteredBy']);
+const INT_NAMES = new Set([
+  'id', 'capacity', 'displayOrder', 'priority', 'attempts', 'maxAttempts', 'assignedBy', 'enteredBy',
+  'accessVersion', 'statusChangedBy', 'onboardedBy', 'grantedBy', 'revokedBy',
+]);
 const BOOLEAN_NAMES = new Set(['pwdResetStatus', 'resolved']);
-const DATE_NAMES = new Set(['lastLogin', 'retryAfter', 'startDate', 'endDate', 'examDate', 'joiningDate', 'dateOfBirth', 'admissionDate']);
+const DATE_NAMES = new Set([
+  'lastLogin', 'retryAfter', 'startDate', 'endDate', 'examDate', 'joiningDate', 'dateOfBirth', 'admissionDate',
+  'validFrom', 'validTo',
+]);
 
 export const fieldKind = (name: string): Kind => {
   if (INT_NAMES.has(name) || name.endsWith('Id')) return 'Int';
@@ -16,7 +22,16 @@ export const fieldKind = (name: string): Kind => {
   return 'Other';
 };
 
-const NEVER_FROM_BODY = new Set(['id', 'createdAt', 'updatedAt']);
+// Never accepted from a request body: row identity, timestamps, and the system-managed columns added in 2.1
+// (identity link, lifecycle bookkeeping, grant history, permission flags). The features that own them (Phases 4–5)
+// set them explicitly in their services.
+const NEVER_FROM_BODY = new Set([
+  'id', 'createdAt', 'updatedAt',
+  'publicId', 'identitySubject', 'accessVersion', 'accountPlane',
+  'statusSource', 'statusReason', 'statusChangedAt', 'statusChangedBy', 'signupSource', 'onboardedBy', 'activatedAt',
+  'validFrom', 'validTo', 'grantedBy', 'grantedAt', 'revokedAt', 'revokedBy', 'revokeReason',
+  'module', 'isSensitive', 'isPlatformOnly',
+]);
 
 const coerce = (kind: Kind, value: unknown): unknown => {
   if (value === null) return null;
@@ -39,13 +54,18 @@ const coerce = (kind: Kind, value: unknown): unknown => {
 };
 
 /**
- * Keeps only the scalar columns listed in a Prisma `<Model>ScalarFieldEnum`, drops id/createdAt/updatedAt,
- * omits undefined values (so partial updates stay partial) and coerces values to the column type.
+ * Keeps only the scalar columns listed in a Prisma `<Model>ScalarFieldEnum`, drops id/createdAt/updatedAt and the
+ * system-managed columns, drops any per-call `exclude` names, omits undefined values (so partial updates stay
+ * partial) and coerces values to the column type.
  */
-export const modelData = (fields: Record<string, string>, body: Record<string, unknown>): Record<string, any> => {
+export const modelData = (
+  fields: Record<string, string>,
+  body: Record<string, unknown>,
+  exclude: readonly string[] = [],
+): Record<string, any> => {
   const out: Record<string, unknown> = {};
   for (const key of Object.keys(fields)) {
-    if (NEVER_FROM_BODY.has(key) || body[key] === undefined) continue;
+    if (NEVER_FROM_BODY.has(key) || exclude.includes(key) || body[key] === undefined) continue;
     out[key] = coerce(fieldKind(key), body[key]);
   }
   return out;

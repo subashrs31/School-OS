@@ -24,7 +24,8 @@ const run = async (): Promise<void> => {
     const exists = await prisma.user.findFirst({ where: { email: u.email } });
     if (exists) { console.log(`  Skipped (exists): ${u.email}`); continue; }
     const user = await prisma.user.create({
-      data: { name: u.name, email: u.email, password: await hashPassword(u.password), uuid: u.uuid, isActive: true },
+      // Both demo users are platform staff (super-admin = primary, admin = secondary role).
+      data: { name: u.name, email: u.email, password: await hashPassword(u.password), uuid: u.uuid, isActive: true, accountPlane: 'PLATFORM' },
     });
     const role = await prisma.role.findFirst({ where: { slug: u.role }, select: { id: true } });
     if (role) await userRoleService.assignUserRole(user.id, { roleId: role.id, scopeType: 'global', scopeId: null });

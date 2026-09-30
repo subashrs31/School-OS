@@ -6,6 +6,9 @@ import { modelData } from '../helpers/modelData';
 const slugify = (name: string) =>
   name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+// `status` is changed only through the lifecycle (5.1) and the license webhooks (4.6), never by a plain update.
+const ORG_BODY_EXCLUDE = ['status'] as const;
+
 const organizationService = {
   list: async () => {
     return prisma.organization.findMany({ orderBy: { name: 'asc' } });
@@ -25,7 +28,7 @@ const organizationService = {
     const slug = slugify(body.name);
     const exists = await prisma.organization.findFirst({ where: { slug } });
     if (exists) throwError('Organization with this name already exists', 409);
-    return prisma.organization.create({ data: { ...modelData(Prisma.OrganizationScalarFieldEnum, body), slug } as Prisma.OrganizationCreateInput });
+    return prisma.organization.create({ data: { ...modelData(Prisma.OrganizationScalarFieldEnum, body, ORG_BODY_EXCLUDE), slug } as Prisma.OrganizationCreateInput });
   },
 
   update: async (id: number, body: Partial<{
@@ -35,7 +38,7 @@ const organizationService = {
   }>) => {
     const org = await prisma.organization.findUnique({ where: { id } });
     if (!org) throwError('Organization not found', 404);
-    const data = modelData(Prisma.OrganizationScalarFieldEnum, body);
+    const data = modelData(Prisma.OrganizationScalarFieldEnum, body, ORG_BODY_EXCLUDE);
     if (body.name && body.name !== org!.name) {
       const slug = slugify(body.name);
       const conflict = await prisma.organization.findFirst({ where: { slug } });

@@ -20,7 +20,7 @@ const run = async (): Promise<void> => {
   for (const p of data) {
     const exists = await prisma.permission.findFirst({ where: { resource: p.resource, action: p.action } });
     if (exists) { console.log(`  Skipped (exists): ${p.slug}`); continue; }
-    await prisma.permission.create({ data: { ...p, isSystem: true } });
+    await prisma.permission.create({ data: { ...p, isSystem: true, module: p.resource } });
     console.log(`  Created: ${p.slug}`);
   }
 };

@@ -73,7 +73,7 @@ Owns identity, sessions, 2FA, tenants and licenses. Detailed docs in [license-se
 |---|---|---|---|
 | 2.0 | Tooling: Postgres, Prisma install, `src/lib/prisma.ts`, test-DB guard, Vitest harness | — | ✅ done in 2.0-P (local PG 18, no Docker) |
 | **2.0-P** | **Port the backend as-is from MySQL/Sequelize to PostgreSQL/Prisma** (owner has no MySQL, 2026-09-30) | same 26 tables | ✅ [change doc](phases/2.0-port-mysql-to-postgres.md) |
-| **2.1** | **Profile, RBAC & tenancy schema + seed** | users (profile only, ADR-005), roles, permissions, role_has_permissions, user_has_roles, user_has_permissions, organizations, branches, organization_social_links, audit_logs (§3–4) | 🔴 **first BE sub-phase** — spec: `phases/2.1-prisma-foundation.md` |
+| **2.1** | **Staged identity, RBAC & tenancy foundation** (additive; owner decision: staged, camelCase) | users (public id, identity link, plane, access version), organizations (public id, status lifecycle, sign-up source), branches (pair key), permissions (module, flags), user_has_roles / user_has_permissions (explicit scope + grant history), new audit_logs (§3–4) | ✅ 2026-09-30 — [2.1 doc](phases/2.1-prisma-foundation.md); social links, org profile, branch columns moved to 5.1/5.2 |
 | 2.2 | Access workflow tables | invitations, support_sessions (§4.7–4.8), BFF `sessions` | 🔴 |
 | 2.3 | People | designations, departments, staff, staff_branch_assignments, students, guardians, student_guardians (§5) | 🔴 |
 | 2.4 | Academics | academic_years, grade_levels, classes, sections, subjects, class_subjects, enrollments, teaching_assignments (§6–7) | 🔴 |

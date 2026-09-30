@@ -33,6 +33,29 @@ describe('modelData', () => {
   it('leaves undefined keys out so partial updates stay partial', () => {
     expect(modelData(Prisma.BranchScalarFieldEnum, { name: undefined, code: 'X' })).toEqual({ code: 'X' });
   });
+
+  // 2.1: columns managed by the system (identity link, lifecycle bookkeeping, grants) are never taken from bodies.
+  it('never takes system-managed columns from the body', () => {
+    const fields = {
+      name: 'name', publicId: 'publicId', identitySubject: 'identitySubject', accessVersion: 'accessVersion',
+      accountPlane: 'accountPlane', statusSource: 'statusSource', signupSource: 'signupSource', onboardedBy: 'onboardedBy',
+      grantedBy: 'grantedBy', revokedAt: 'revokedAt', isPlatformOnly: 'isPlatformOnly', module: 'module',
+    };
+    const body = {
+      name: 'Alpha', publicId: '00000000-0000-0000-0000-000000000000', identitySubject: 'ls-1', accessVersion: 99,
+      accountPlane: 'PLATFORM', statusSource: 'SUBSCRIPTION', signupSource: 'SELF_SERVICE', onboardedBy: 1,
+      grantedBy: 1, revokedAt: '2026-01-01', isPlatformOnly: true, module: 'x',
+    };
+    expect(modelData(fields, body)).toEqual({ name: 'Alpha' });
+  });
+
+  it('drops the extra per-call exclusions', () => {
+    expect(modelData({ name: 'name', status: 'status' }, { name: 'A', status: 'CLOSED' }, ['status'])).toEqual({ name: 'A' });
+  });
+
+  it('still accepts a column named status when not excluded (staff, students)', () => {
+    expect(modelData({ status: 'status' }, { status: 'on_leave' })).toEqual({ status: 'on_leave' });
+  });
 });
 
 describe('fieldKind naming conventions match prisma/schema.prisma', () => {

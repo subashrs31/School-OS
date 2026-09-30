@@ -95,6 +95,18 @@ describe('API contract after the Prisma port', () => {
       const res = await agent.get(`/api/organizations/${orgId}`);
       expect(res.body.data.summary).toEqual({ branchCount: 1, staffCount: 0, studentCount: 0 });
     });
+
+    it('does not let the body change system-managed organization fields (2.1)', async () => {
+      const before = (await agent.get(`/api/organizations/${orgId}`)).body.data.organization;
+      expect(before.status).toBe('ACTIVE');
+      const res = await agent.patch(`/api/organizations/${orgId}`).send({
+        email: 'admin-office@example.com', status: 'CLOSED', publicId: '00000000-0000-0000-0000-000000000000', signupSource: 'SELF_SERVICE',
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.data.organization).toMatchObject({
+        email: 'admin-office@example.com', status: 'ACTIVE', publicId: before.publicId, signupSource: 'PLATFORM',
+      });
+    });
   });
 
   describe('staff', () => {

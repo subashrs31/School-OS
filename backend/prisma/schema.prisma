@@ -25,6 +25,43 @@ enum RoleType {
 enum ScopeType {
   global
   organization
+  branch
+}
+
+// ── 2.1 foundation enums (design doc values) ─────────────────────────────────
+
+enum AccountPlane {
+  PLATFORM
+  SCHOOL
+}
+
+enum OrganizationStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum OrganizationStatusSource {
+  MANUAL
+  SUBSCRIPTION
+}
+
+enum SignupSource {
+  PLATFORM
+  SELF_SERVICE
+}
+
+enum AuditActorPlane {
+  PLATFORM
+  SCHOOL
+  SYSTEM
+}
+
+enum AuditOutcome {
+  SUCCESS
+  DENIED
 }
 
 enum PermissionEffect {
@@ -99,6 +136,12 @@ model User {
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
+  // 2.1 — link to the license-server identity (ADR-005) and access freshness (ADR-003)
+  publicId        String       @unique(map: "users_public_id_unique") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identitySubject String?      @unique(map: "users_identity_subject_unique") @db.VarChar(64)
+  accountPlane    AccountPlane @default(SCHOOL)
+  accessVersion   Int          @default(1)
+
   UserHasRoles       UserHasRole[]
   UserHasPermissions UserHasPermission[]
   Notifications      Notification[]
@@ -138,6 +181,11 @@ model Permission {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // 2.1 — design §4.3 (module required from 4.4; flags assigned with the delegation rules in 4.4)
+  module         String? @db.VarChar(50)
+  isSensitive    Boolean @default(false)
+  isPlatformOnly Boolean @default(false)
+
   UserHasPermissions UserHasPermission[]
   RoleHasPermissions RoleHasPermission[]
 
@@ -157,10 +205,25 @@ model UserHasRole {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  // 2.1 — explicit scope and grant history (design §4.5); read by the scoped authorize() in 4.3
+  organizationId Int?
+  branchId       Int?
+  validFrom      DateTime?
+  validTo        DateTime?
+  grantedBy      Int?
+  grantedAt      DateTime?
+  revokedAt      DateTime?
+  revokedBy      Int?
+  revokeReason   String?   @db.VarChar(255)
+
+  User         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Role         Role          @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  Organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Pair FK: the branch must belong to the same organization (design §2 isolation wall).
+  Branch       Branch?       @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Cascade)
 
   @@unique([userId, roleId, scopeType, scopeId], map: "user_has_roles_userid_roleid_scope")
+  @@index([organizationId, branchId], map: "user_has_roles_org_branch")
   @@map("user_has_roles")
 }
 
@@ -192,10 +255,21 @@ model UserHasPermission {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  // 2.1 — explicit scope and grant history (design §4.6)
+  organizationId Int?
+  branchId       Int?
+  reason         String?   @db.VarChar(255)
+  grantedBy      Int?
+  grantedAt      DateTime?
+  revokedAt      DateTime?
+
+  User         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Permission   Permission    @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  Organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Branch       Branch?       @relation(fields: [organizationId, branchId], references: [organizationId, id], onDelete: Cascade)
 
   @@unique([userId, permissionId, scopeType, scopeId], map: "user_has_permissions_userid_permissionid_scope")
+  @@index([organizationId, branchId], map: "user_has_permissions_org_branch")
   @@map("user_has_permissions")
 }
 
@@ -270,6 +344,18 @@ model Organization {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // 2.1 — tenant id shared with the license server and the status lifecycle (design §3.1, ADR-007).
+  // Until 5.1 switches the services over, isActive stays authoritative; status is backfilled from it.
+  publicId        String                   @unique(map: "organizations_public_id_unique") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status          OrganizationStatus       @default(ACTIVE)
+  statusSource    OrganizationStatusSource @default(MANUAL)
+  statusReason    String?                  @db.VarChar(255)
+  statusChangedAt DateTime?
+  statusChangedBy Int?
+  signupSource    SignupSource             @default(PLATFORM)
+  onboardedBy     Int?
+  activatedAt     DateTime?
+
   Branches                   Branch[]
   UserOrganizations          UserOrganization[]
   Designations               Designation[]
@@ -283,6 +369,8 @@ model Organization {
   SubjectTeacherAssignments  SubjectTeacherAssignment[]
   Exams                      Exam[]
   Marks                      Mark[]
+  UserHasRoles               UserHasRole[]
+  UserHasPermissions         UserHasPermission[]
 
   @@map("organizations")
 }
@@ -310,7 +398,11 @@ model Branch {
   SubjectTeacherAssignments  SubjectTeacherAssignment[]
   Exams                      Exam[]
   Marks                      Mark[]
+  UserHasRoles               UserHasRole[]
+  UserHasPermissions         UserHasPermission[]
 
+  // Pair key referenced by scoped assignments (design §2 rules 2–3).
+  @@unique([organizationId, id], map: "branches_organization_id_id_unique")
   @@index([organizationId], map: "branches_organization_id")
   @@map("branches")
 }
@@ -668,4 +760,30 @@ model Mark {
   @@index([examId], map: "marks_exam_id")
   @@index([studentId], map: "marks_student_id")
   @@map("marks")
+}
+
+// ── Audit (2.1) ───────────────────────────────────────────────────────────────
+
+// Append-only (a trigger in the migration rejects UPDATE and DELETE). No foreign keys on purpose: audit rows must
+// outlive the users, schools and branches they describe (design §4.9).
+model AuditLog {
+  id               Int             @id @default(autoincrement())
+  occurredAt       DateTime        @default(now())
+  actorUserId      Int?
+  actorPlane       AuditActorPlane
+  supportSessionId Int?
+  organizationId   Int?
+  branchId         Int?
+  action           String          @db.VarChar(100)
+  targetType       String?         @db.VarChar(60)
+  targetId         Int?
+  changeSummary    Json?
+  reason           String?         @db.VarChar(500)
+  outcome          AuditOutcome
+  ipAddress        String?         @db.VarChar(45)
+  deviceInfo       String?         @db.VarChar(255)
+
+  @@index([organizationId, occurredAt], map: "audit_logs_organization_id_occurred_at")
+  @@index([occurredAt], map: "audit_logs_occurred_at")
+  @@map("audit_logs")
 }

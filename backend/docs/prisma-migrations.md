@@ -17,8 +17,17 @@
 
 The AI assistant **never** runs `prisma migrate dev | deploy | reset` or `prisma db push` (CLAUDE.md §20). It edits
 `schema.prisma`, reviews the generated `migration.sql`, and may edit a migration's SQL **only before it is applied**.
-One recorded exception: the initial migration `20260929200833_init_port_from_mysql` was applied by the assistant with
-the owner's explicit one-time approval on 2026-09-30 (dev DB via `migrate dev`, test DB via `migrate deploy`).
+Recorded exceptions (each at the owner's explicit request):
+
+| Date | Migration | What the assistant ran |
+|---|---|---|
+| 2026-09-30 | `20260929200833_init_port_from_mysql` | `migrate dev` (dev DB), `migrate deploy` (test DB) |
+| 2026-09-30 | `20260930050955_identity_tenancy_foundation` | SQL generated with `migrate diff --from-config-datasource --to-schema` (after a no-drift check), hand-written backfill appended, applied with `migrate deploy` (dev) and `npm run db:test:migrate` (test) |
+
+**Non-interactive shells** (the assistant's terminal, CI): `prisma migrate dev` refuses to run when it has warnings
+to confirm. The equivalent is: check for drift → `npx prisma migrate diff --from-config-datasource --to-schema
+prisma/schema.prisma --script` into a new `prisma/migrations/<UTC timestamp>_<name>/migration.sql` → review / append
+SQL → `npx prisma migrate deploy`.
 
 ## Databases
 
