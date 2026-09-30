@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>License Server UI Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* School OS look: Geist, neutral palette, 10px radius (frontend/src/index.css). */
+  :root {
+    --page: #e9e9e7;
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --fg: #0a0a0a;
+    --primary: #171717;
+    --primary-hover: #333333;
+    --primary-fg: #fafafa;
+    --muted: #f4f4f4;
+    --muted-fg: #595959;
+    --border: #e5e5e5;
+    --input: #cfcfcf;
+    --danger: #b3261e;
+    --danger-bg: #fdecea;
+    --radius: 10px;
+    --active-bg: #e7f4ec;   --active-fg: #0f5b35;
+    --trial-bg: #e6eefc;    --trial-fg: #1a43a0;
+    --inactive-bg: #eeeeee; --inactive-fg: #444444;
+    --susp-bg: #fcebd9;     --susp-fg: #8a3f04;
+    --pending-bg: #eee8f8;  --pending-fg: #4e3494;
+    --closed-bg: #262626;   --closed-fg: #fafafa;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--fg); background: var(--page); font-size: 14px; line-height: 1.45; }
+  a { color: var(--primary); }
+  a:hover { color: #525252; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .mono { font-family: 'Geist Mono', ui-monospace, 'Cascadia Mono', monospace; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ── Mockup chrome ─────────────────────────────────────────── */
+  .mk-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 20px; background: var(--primary); color: var(--primary-fg); }
+  .mk-top h1 { margin: 0; font-size: 15px; font-weight: 600; }
+  .mk-top .tag { font-size: 12px; padding: 3px 8px; border: 1px solid #5a5a5a; border-radius: 999px; color: #d9d9d9; }
+  .mk-top .spacer { flex: 1; }
+  .mk-toggle { display: inline-flex; background: #2b2b2b; border-radius: 10px; padding: 3px; gap: 3px; }
+  .mk-toggle button { border: 0; background: transparent; color: #d9d9d9; padding: 6px 12px; border-radius: 8px; cursor: pointer; min-height: 32px; }
+  .mk-toggle button[aria-pressed="true"] { background: var(--primary-fg); color: var(--primary); font-weight: 600; }
+  .mk-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: calc(100vh - 58px); }
+  .mk-nav { border-right: 1px solid #d6d6d4; background: #f3f3f1; padding: 16px 12px; overflow-y: auto; }
+  .mk-nav h2 { margin: 18px 8px 6px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted-fg); }
+  .mk-nav h2:first-child { margin-top: 4px; }
+  .mk-nav button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 8px; cursor: pointer; min-height: 36px; }
+  .mk-nav button:hover { background: #e6e6e3; }
+  .mk-nav button[aria-current="page"] { background: var(--surface); box-shadow: 0 0 0 1px #d6d6d4; font-weight: 600; }
+  .mk-nav .help { margin: 20px 8px 0; font-size: 12px; color: var(--muted-fg); }
+  .mk-stage { padding: 24px; overflow-x: auto; }
+  .mk-caption { max-width: 1440px; margin: 0 auto 16px; display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .mk-caption .ttl { font-size: 20px; font-weight: 600; margin: 0; }
+  .mk-caption .who { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface); border: 1px solid #d6d6d4; white-space: nowrap; }
+  .mk-caption .note { flex-basis: 100%; margin: 0; color: #3d3d3d; max-width: 900px; }
+
+  /* ── Device frame ──────────────────────────────────────────── */
+  .device { position: relative; container-type: inline-size; container-name: device; margin: 0 auto; background: var(--bg); overflow: hidden; }
+  .device[data-mode="desktop"] { width: 100%; max-width: 1440px; min-height: 820px; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 0 0 1px #d6d6d4; }
+  .device[data-mode="phone"] { width: 410px; height: 864px; border: 10px solid #171717; border-radius: 44px; overflow-y: auto; }
+  .screen { display: none; min-height: 100%; }
+  .screen.on { display: block; }
+  .device[data-mode="desktop"] .screen.on { min-height: 820px; }
+
+  /* ── Shared UI ─────────────────────────────────────────────── */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--radius); border: 1px solid var(--input); background: var(--surface); color: var(--fg); font-weight: 500; text-decoration: none; cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: var(--muted); color: var(--fg); }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .btn-primary:hover { background: var(--primary-hover); color: var(--primary-fg); }
+  .btn-danger { background: var(--danger); border-color: var(--danger); color: #ffffff; font-weight: 600; }
+  .btn-danger:hover { background: #8f1d17; color: #ffffff; }
+  .btn-ghost-danger { color: var(--danger); }
+  .btn-sm { min-height: 36px; padding: 0 12px; font-size: 13px; }
+  .btn-block { width: 100%; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label, .field .lbl { font-size: 13px; font-weight: 500; }
+  .input, select.input, textarea.input { min-height: 44px; border: 1px solid var(--input); border-radius: var(--radius); padding: 10px 14px; background: var(--surface); width: 100%; }
+  textarea.input { min-height: 96px; resize: vertical; }
+  .input:focus, .btn:focus-visible, a:focus-visible, button:focus-visible { outline: 2px solid #1a43a0; outline-offset: 2px; }
+  .hint { font-size: 12px; color: var(--muted-fg); }
+  .muted { color: var(--muted-fg); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .b-active { background: var(--active-bg); color: var(--active-fg); }
+  .b-trial { background: var(--trial-bg); color: var(--trial-fg); }
+  .b-inactive { background: var(--inactive-bg); color: var(--inactive-fg); }
+  .b-suspended { background: var(--susp-bg); color: var(--susp-fg); }
+  .b-pending { background: var(--pending-bg); color: var(--pending-fg); }
+  .b-closed { background: var(--closed-bg); color: var(--closed-fg); }
+  .b-success { background: var(--active-bg); color: var(--active-fg); }
+  .b-denied { background: var(--danger-bg); color: var(--danger); }
+  .icon { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── Sign-in pages ─────────────────────────────────────────── */
+  .auth { min-height: 100%; display: grid; grid-template-columns: minmax(0, 1fr); }
+  .device[data-mode="desktop"] .auth { min-height: 820px; }
+  .auth-side { display: none; }
+  .auth-main { display: flex; flex-direction: column; padding: 48px 24px 28px; gap: 28px; min-height: 100%; }
+  .auth-card { width: 100%; max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; flex: 1; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .mark { width: 36px; height: 36px; border-radius: 10px; background: var(--primary); color: var(--primary-fg); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .brand .name { display: flex; flex-direction: column; line-height: 1.2; }
+  .brand .name b { font-size: 16px; }
+  .brand .name span { font-size: 12px; color: var(--muted-fg); }
+  .auth h2 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+  .auth p.lead { margin: 6px 0 0; color: var(--muted-fg); }
+  .auth form { display: flex; flex-direction: column; gap: 18px; }
+  .auth .row-between { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .auth .foot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted-fg); margin-top: auto; }
+  .info { padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); border-radius: 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .otp { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+  .otp input { min-height: 52px; text-align: center; font-size: 22px; font-weight: 600; border: 1px solid var(--input); border-radius: var(--radius); background: var(--surface); padding: 0; }
+  .qr { width: 176px; height: 176px; border: 1px dashed #9a9a9a; border-radius: 12px; display: grid; place-items: center; background: repeating-linear-gradient(45deg, #f4f4f4, #f4f4f4 8px, #ffffff 8px, #ffffff 16px); font-size: 13px; color: var(--muted-fg); text-align: center; margin: 0 auto; }
+  .steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
+  .steps li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; }
+  .steps .n { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: var(--primary-fg); display: grid; place-items: center; font-size: 13px; font-weight: 600; }
+  .placeholder { font-family: 'Geist Mono', monospace; font-size: 12px; background: #fff7e0; color: #6b4d00; padding: 1px 6px; border-radius: 4px; }
+  .centered-state { text-align: center; align-items: center; }
+  .state-icon { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: var(--muted); }
+  .state-icon .icon { width: 26px; height: 26px; }
+  @container device (min-width: 900px) {
+    .auth { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .auth-side { display: flex; flex-direction: column; justify-content: space-between; padding: 48px; background: var(--primary); color: var(--primary-fg); }
+    .auth-side h3 { margin: 0; font-size: 34px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; max-width: 440px; }
+    .auth-side p { margin: 12px 0 0; color: #cfcfcf; max-width: 420px; }
+    .auth-side ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; color: #e0e0e0; }
+    .auth-side li { display: flex; gap: 10px; align-items: center; }
+    .auth-main { justify-content: center; padding: 56px; }
+    .auth-card { flex: 0; }
+  }
+
+  /* ── Dev inbox ─────────────────────────────────────────────── */
+  .inbox { display: flex; flex-direction: column; min-height: 100%; }
+  .inbox-banner { display: flex; gap: 10px; align-items: center; padding: 10px 20px; background: #fff7e0; color: #5c4200; border-bottom: 1px solid #f0dfa8; font-size: 13px; }
+  .inbox-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+  .inbox-head h2 { margin: 0; font-size: 18px; }
+  .inbox-body { display: grid; grid-template-columns: 380px minmax(0, 1fr); flex: 1; }
+  .msg-list { border-right: 1px solid var(--border); background: var(--surface); }
+  .msg { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--border); background: transparent; padding: 14px 20px; cursor: pointer; }
+  .msg:hover { background: var(--muted); }
+  .msg[aria-current="true"] { background: #f0f0ee; box-shadow: inset 3px 0 0 var(--primary); }
+  .msg .top { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted-fg); }
+  .msg .subj { font-weight: 600; }
+  .chan { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--input); color: #3d3d3d; }
+  .msg-view { padding: 28px 32px; display: flex; flex-direction: column; gap: 16px; }
+  .msg-view .meta { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 6px 12px; font-size: 13px; }
+  .mail { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 24px; display: flex; flex-direction: column; gap: 14px; max-width: 560px; }
+  .code-box { font-size: 30px; letter-spacing: .3em; font-weight: 600; }
+  @container device (max-width: 760px) {
+    .inbox-body { grid-template-columns: minmax(0, 1fr); }
+    .msg-list { border-right: 0; }
+    .msg-view { padding: 20px; border-top: 1px solid var(--border); }
+  }
+
+  /* ── Admin UI ──────────────────────────────────────────────── */
+  .adm { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100%; }
+  .device[data-mode="desktop"] .adm { min-height: 820px; }
+  .adm-side { background: #f3f3f2; border-right: 1px solid var(--border); padding: 18px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .adm-side .brand { padding: 4px 8px 16px; }
+  .adm-side a.nav { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; text-decoration: none; color: #262626; min-height: 40px; }
+  .adm-side a.nav:hover { background: #e7e7e5; color: #0a0a0a; }
+  .adm-side a.nav[aria-current="page"] { background: var(--surface); box-shadow: 0 0 0 1px var(--border); font-weight: 600; color: #0a0a0a; }
+  .adm-side .grow { flex: 1; }
+  .adm-side .sep { height: 1px; background: var(--border); margin: 8px 4px; }
+  .me { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #d9d9d6; display: grid; place-items: center; font-size: 12px; font-weight: 600; flex: none; }
+  .me .who { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+  .me .who b { font-size: 13px; }
+  .me .who span { font-size: 12px; color: var(--muted-fg); }
+  .adm-mtop { display: none; align-items: center; gap: 10px; padding: 12px 16px; background: #f3f3f2; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 3; }
+  .adm-mtop .brand .name span { display: none; }
+  .adm-main { padding: 28px 32px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .page-head h2 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+  .page-head p { margin: 4px 0 0; color: var(--muted-fg); max-width: 640px; }
+  .page-head .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .crumbs { font-size: 13px; color: var(--muted-fg); display: flex; gap: 6px; align-items: center; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .search { position: relative; flex: 1; min-width: 220px; max-width: 360px; }
+  .search .icon { position: absolute; left: 12px; top: 13px; color: var(--muted-fg); }
+  .search .input { padding-left: 38px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--input); background: var(--surface); cursor: pointer; font-size: 13px; }
+  .chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+  .tbl-wrap { overflow-x: auto; }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .tbl th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted-fg); padding: 10px 14px; border-bottom: 1px solid var(--border); background: #fbfbfa; white-space: nowrap; }
+  .tbl td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl .strong { font-weight: 600; }
+  .tbl .actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .grid-2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .card-h { padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .card-h h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .card-b { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+  .kv { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 16px; font-size: 13.5px; }
+  .kv dt { color: var(--muted-fg); }
+  .kv dd { margin: 0; }
+  .limits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .limit { border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+  .limit b { font-size: 20px; }
+  .limit span { font-size: 12px; color: var(--muted-fg); }
+  .person { display: flex; align-items: center; gap: 12px; }
+  .person .txt { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+  .person .txt span { font-size: 12.5px; color: var(--muted-fg); }
+  .timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .timeline li { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 12px; font-size: 13px; }
+  .timeline .dot { width: 8px; height: 8px; border-radius: 50%; background: #9a9a9a; margin-top: 6px; }
+  .timeline time { display: block; font-size: 12px; color: var(--muted-fg); }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .check { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+  .check input { width: 18px; height: 18px; accent-color: #171717; }
+  .switch { position: relative; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .switch input { width: 36px; height: 20px; accent-color: #171717; }
+  .rule { padding: 12px 14px; border-radius: 10px; background: var(--muted); font-size: 13px; }
+  @container device (max-width: 760px) {
+    .adm { grid-template-columns: minmax(0, 1fr); }
+    .adm-side { display: none; }
+    .adm-side.open { display: flex; position: absolute; inset: 58px 0 auto 0; z-index: 5; box-shadow: 0 12px 24px rgba(0,0,0,.15); border-right: 0; border-bottom: 1px solid var(--border); }
+    .adm-side.open .brand, .adm-side.open .grow { display: none; }
+    .adm-mtop { display: flex; }
+    .adm-main { padding: 20px 16px; }
+    .page-head h2 { font-size: 21px; }
+    .grid-2 { grid-template-columns: minmax(0, 1fr); }
+    .form-grid { grid-template-columns: minmax(0, 1fr); }
+    .kv { grid-template-columns: 120px minmax(0, 1fr); }
+    .search { max-width: none; }
+    table.tbl thead { display: none; }
+    table.tbl, .tbl tbody, .tbl tr, .tbl td { display: block; width: 100%; }
+    .tbl tr { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; background: var(--surface); padding: 4px 0; }
+    .tbl td { border-bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 14px; }
+    .tbl td::before { content: attr(data-label); font-size: 12px; color: var(--muted-fg); font-weight: 500; }
+    .tbl td[data-label=""]::before { content: none; }
+    .tbl .actions { justify-content: flex-start; }
+    .card.flat-mobile { border: 0; background: transparent; }
+  }
+
+  /* ── Dialogs ───────────────────────────────────────────────── */
+  .modal-bg { position: absolute; inset: 0; z-index: 30; background: rgba(10, 10, 10, .45); display: none; align-items: flex-start; justify-content: center; padding: 72px 16px 16px; }
+  .modal-bg.open { display: flex; }
+  .modal { width: 100%; max-width: 460px; background: var(--surface); border-radius: 14px; box-shadow: 0 20px 48px rgba(0,0,0,.25); display: flex; flex-direction: column; }
+  .modal-h { padding: 18px 20px 6px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .modal-h h3 { margin: 0; font-size: 17px; }
+  .modal-b { padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 14px; }
+  .modal-f { padding: 14px 20px 18px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .x { border: 0; background: transparent; width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: grid; place-items: center; }
+  .x:hover { background: var(--muted); }
+
+  @media (max-width: 900px) {
+    .mk-layout { grid-template-columns: minmax(0, 1fr); }
+    .mk-nav { border-right: 0; border-bottom: 1px solid #d6d6d4; }
+    .mk-stage { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-school" viewBox="0 0 24 24"><path d="M3 10l9-6 9 6-9 6-9-6z"/><path d="M7 12.5V17c0 1 2.2 2.5 5 2.5s5-1.5 5-2.5v-4.5"/></symbol>
+  <symbol id="i-plan" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2 2M14 9l2 2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.5-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14.8c1.8.7 3 2.4 3.5 5.2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1.5 2.5h5L16 13h5"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4h5v16h-5"/><path d="M10 16l-4-4 4-4M6 12h10"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5L12 13l8.5-6.5"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></symbol>
+</svg>
+
+<header class="mk-top">
+  <h1>School OS · License server — UI mockup</h1>
+  <span class="tag">For review · sample data</span>
+  <span class="spacer"></span>
+  <div class="mk-toggle" role="group" aria-label="Screen size">
+    <button type="button" data-mode-btn="phone" aria-pressed="false">Phone</button>
+    <button type="button" data-mode-btn="desktop" aria-pressed="true">Desktop</button>
+  </div>
+</header>
+
+<div class="mk-layout">
+  <nav class="mk-nav" aria-label="Screens">
+    <h2>Sign-in pages (everyone)</h2>
+    <button type="button" data-go="signin">Sign in</button>
+    <button type="button" data-go="twostep-code">Two-step code</button>
+    <button type="button" data-go="twostep-setup">Two-step setup (first time)</button>
+    <button type="button" data-go="forgot">Forgot password</button>
+    <button type="button" data-go="reset">Reset password</button>
+    <button type="button" data-go="setpassword">Set password (invitation / sign-up)</button>
+    <button type="button" data-go="inactive">School access inactive</button>
+    <button type="button" data-go="signedout">Signed out</button>
+    <h2>Local development</h2>
+    <button type="button" data-go="devinbox">Dev inbox</button>
+    <h2>Admin UI (platform staff)</h2>
+    <button type="button" data-go="schools">Schools</button>
+    <button type="button" data-go="school-detail">School detail</button>
+    <button type="button" data-go="plans">Plans</button>
+    <button type="button" data-go="licences">Licences</button>
+    <button type="button" data-go="staff">Platform staff</button>
+    <button type="button" data-go="audit">Audit log</button>
+    <p class="help">Buttons and links inside the screens move between screens, like the real thing. Switch Phone / Desktop at the top. Names, dates and codes are samples; <span class="placeholder">[LIKE THIS]</span> marks values you decide.</p>
+  </nav>
+
+  <main class="mk-stage">
+    <div class="mk-caption" aria-live="polite">
+      <h2 class="ttl" id="cap-title">Sign in</h2>
+      <span class="who" id="cap-who">Everyone</span>
+      <p class="note" id="cap-note"></p>
+    </div>
+
+    <div class="device" id="device" data-mode="desktop">
+
+      <!-- ═══════════════ SIGN IN ═══════════════ -->
+      <section class="screen" data-screen="signin" data-title="Sign in" data-who="Everyone"
+        data-note="Everyone signs in here: platform staff, school admins, teachers and later parents. Email or mobile number + password. Platform staff and school admins then enter a two-step code. Try: Sign in → Two-step code → Schools.">
+        <div class="auth">
+          <aside class="auth-side" aria-hidden="true">
+            <div class="brand"><div class="mark" style="background:#fafafa;color:#171717">OS</div><div class="name"><b>School OS</b><span style="color:#bdbdbd">License server</span></div></div>
+            <div>
+              <h3>One sign-in for every school on School OS.</h3>
+              <p>Your password never passes through the school app. Sign-in, two-step verification and licences are handled here.</p>
+            </div>
+            <ul>
+              <li><svg class="icon"><use href="#i-shield"/></svg>Two-step sign-in for admins</li>
+              <li><svg class="icon"><use href="#i-lock"/></svg>Locked after repeated wrong passwords</li>
+              <li><svg class="icon"><use href="#i-school"/></svg>Only schools with an active licence</li>
+            </ul>
+          </aside>
+          <div class="auth-main">
+            <div class="auth-card">
+              <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>Secure sign-in</span></div></div>
+              <div>
+                <h2>Sign in</h2>
+                <p class="lead">Use the email address or mobile number your school or the School OS team registered for you.</p>
+              </div>
+              <form>
+                <div class="field">
+                  <label for="f-id">Email or mobile number</label>
+                  <input class="input" id="f-id" type="text" autocomplete="username" value="priya.nair@example.com">
+                </div>
+                <div class="field">
+                  <div class="row-between"><label for="f-pw">Password</label><a href="#" data-go="forgot" style="font-size:13px">Forgot password?</a></div>
+                  <input class="input" id="f-pw" type="password" autocomplete="current-password" value="sample-password">
+                </div>
+                <a href="#" class="btn btn-primary btn-block" data-go="twostep-code">Sign in</a>
+              </form>
+              <div class="info"><b>Invited to School OS?</b><span class="muted">Open the link in your invitation to set a password first, then sign in here.</span></div>
+              <div class="foot"><span>School OS license server</span><span>Wrong password 5 times → locked 15 min</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ TWO-STEP CODE ═══════════════ -->
+      <section class="screen" data-screen="twostep-code" data-title="Two-step code" data-who="Platform staff · school admins"
+        data-note="Second step for platform staff and school admins. The 6-digit code comes from an authenticator app (Google or Microsoft Authenticator) — it works offline and needs no SMS.">
+        <div class="auth"><div class="auth-main"><div class="auth-card">
+          <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>Secure sign-in</span></div></div>
+          <div class="state-icon"><svg class="icon"><use href="#i-shield"/></svg></div>
+          <div>
+            <h2>Two-step sign-in</h2>
+            <p class="lead">Enter the 6-digit code from your authenticator app for <b>priya.nair@example.com</b>.</p>
+          </div>
+          <form>
+            <fieldset style="border:0;padding:0;margin:0" class="field">
+              <legend class="lbl" style="margin-bottom:6px">6-digit code</legend>
+              <div class="otp">
+                <input aria-label="Digit 1" inputmode="numeric" maxlength="1" value="4">
+                <input aria-label="Digit 2" inputmode="numeric" maxlength="1" value="8">
+                <input aria-label="Digit 3" inputmode="numeric" maxlength="1" value="2">
+                <input aria-label="Digit 4" inputmode="numeric" maxlength="1" value="9">
+                <input aria-label="Digit 5" inputmode="numeric" maxlength="1" value="1">
+                <input aria-label="Digit 6" inputmode="numeric" maxlength="1" value="3">
+              </div>
+            </fieldset>
+            <a href="#" class="btn btn-primary btn-block" data-go="schools">Verify and continue</a>
+            <div class="row-between" style="font-size:13px"><a href="#">Use a recovery code</a><a href="#" data-go="signin">Back to sign in</a></div>
+          </form>
+          <div class="foot"><span>The code changes every 30 seconds</span><span></span></div>
+        </div></div></div>
+      </section>
+
+      <!-- ═══════════════ TWO-STEP SETUP ═══════════════ -->
+      <section class="screen" data-screen="twostep-setup" data-title="Two-step setup (first sign-in)" data-who="Platform staff · school admins"
+        data-note="Shown once, the first time a platform staff member or school admin signs in (for example right after setting a password from an invitation).">
+        <div class="auth"><div class="auth-main"><div class="auth-card">
+          <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>Secure sign-in</span></div></div>
+          <div>
+            <h2>Set up two-step sign-in</h2>
+            <p class="lead">Admins need a second step so a stolen password is not enough.</p>
+          </div>
+          <ol class="steps">
+            <li><span class="n">1</span><div><b>Install an authenticator app</b><div class="muted">Google Authenticator or Microsoft Authenticator.</div></div></li>
+            <li><span class="n">2</span><div style="display:flex;flex-direction:column;gap:10px"><b>Scan this code with the app</b><div class="qr">QR code<br>(sample)</div><div class="muted" style="font-size:13px">Can't scan? Enter this key: <span class="mono">JBSW Y3DP EHPK 3PXP</span></div></div></li>
+            <li><span class="n">3</span><div class="field" style="width:100%"><label for="f-setup">Enter the 6-digit code the app shows</label><input class="input mono" id="f-setup" inputmode="numeric" value="482 913"></div></li>
+          </ol>
+          <a href="#" class="btn btn-primary btn-block" data-go="schools">Turn on two-step sign-in</a>
+          <div class="info"><b>Next: 10 recovery codes</b><span class="muted">Shown once after this step. Keep them safe — each works once if you lose your phone.</span></div>
+        </div></div></div>
+      </section>
+
+      <!-- ═══════════════ FORGOT PASSWORD ═══════════════ -->
+      <section class="screen" data-screen="forgot" data-title="Forgot password" data-who="Everyone"
+        data-note="The page gives the same answer whether or not the account exists, so nobody can find out who has an account. Locally, the reset link goes to the dev inbox. Try: Send reset link → Dev inbox → Reset password.">
+        <div class="auth"><div class="auth-main"><div class="auth-card">
+          <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>Secure sign-in</span></div></div>
+          <div>
+            <h2>Forgot your password?</h2>
+            <p class="lead">Enter your email or mobile number. If it belongs to an account, we send a reset link or code.</p>
+          </div>
+          <form>
+            <div class="field"><label for="f-fid">Email or mobile number</label><input class="input" id="f-fid" type="text" value="priya.nair@example.com"></div>
+            <a href="#" class="btn btn-primary btn-block" data-go="devinbox">Send reset link</a>
+            <a href="#" data-go="signin" style="font-size:13px">Back to sign in</a>
+          </form>
+          <div class="info"><b>After sending</b><span class="muted">“If this account exists, we've sent a link. It works once and expires in 15 minutes.”</span></div>
+        </div></div></div>
+      </section>
+
+      <!-- ═══════════════ RESET PASSWORD ═══════════════ -->
+      <section class="screen" data-screen="reset" data-title="Reset password" data-who="Everyone"
+        data-note="Opened from the reset link. Saving signs the person out everywhere else. Password rules are decided in LS-3.">
+        <div class="auth"><div class="auth-main"><div class="auth-card">
+          <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>Secure sign-in</span></div></div>
+          <div>
+            <h2>Choose a new password</h2>
+            <p class="lead">For <b>priya.nair@example.com</b>.</p>
+          </div>
+          <form>
+            <div class="field"><label for="f-np">New password</label><input class="input" id="f-np" type="password" value="new-sample-password"></div>
+            <div class="field"><label for="f-np2">Repeat new password</label><input class="input" id="f-np2" type="password" value="new-sample-password"></div>
+            <div class="rule">Password rules: <span class="placeholder">[PASSWORD RULES — set in LS-3]</span></div>
+            <a href="#" class="btn btn-primary btn-block" data-go="signin">Save password</a>
+          </form>
+          <div class="info"><span class="muted">Saving signs you out on every other device.</span></div>
+        </div></div></div>
+      </section>
+
+      <!-- ═══════════════ SET PASSWORD ═══════════════ -->
+      <section class="screen" data-screen="setpassword" data-title="Set password (invitation or school sign-up)" data-who="Invited people · new schools"
+        data-note="Opened from an invitation link or a self-service school sign-up. Setting the password also confirms the email or mobile. School admins continue to two-step setup; for a self-service sign-up this is when the 7-day trial starts.">
+        <div class="auth"><div class="auth-main"><div class="auth-card">
+          <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>Secure sign-in</span></div></div>
+          <div>
+            <h2>Welcome to School OS</h2>
+            <p class="lead"><b>Asha Rao</b>, you were invited as <b>School admin</b> of <b>Green Valley School</b>. Choose a password to finish.</p>
+          </div>
+          <form>
+            <div class="field"><span class="lbl">Signing in as</span><div class="input" style="display:flex;align-items:center;background:var(--muted)">asha.rao@example.com</div></div>
+            <div class="field"><label for="f-sp">Password</label><input class="input" id="f-sp" type="password" value="sample-password"></div>
+            <div class="field"><label for="f-sp2">Repeat password</label><input class="input" id="f-sp2" type="password" value="sample-password"></div>
+            <a href="#" class="btn btn-primary btn-block" data-go="twostep-setup">Set password and continue</a>
+          </form>
+          <div class="info"><span class="muted">This link works once and expires 7 days after it was sent.</span></div>
+        </div></div></div>
+      </section>
+
+      <!-- ═══════════════ SCHOOL INACTIVE ═══════════════ -->
+      <section class="screen" data-screen="inactive" data-title="School access inactive" data-who="People of an inactive school"
+        data-note="Shown after sign-in when the school's licence or trial has ended. Teachers and parents stop here. School admins can still get in, so they can renew.">
+        <div class="auth"><div class="auth-main"><div class="auth-card centered-state">
+          <div class="brand" style="align-self:flex-start"><div class="mark">OS</div><div class="name"><b>School OS</b><span>Secure sign-in</span></div></div>
+          <div class="state-icon" style="margin-top:24px"><svg class="icon"><use href="#i-pause"/></svg></div>
+          <div>
+            <h2>Green Valley School's access is paused</h2>
+            <p class="lead">The school's free trial ended on 7 Oct 2026. Teachers and parents can sign in again once the school renews.</p>
+          </div>
+          <div class="info" style="text-align:left;width:100%"><b>You are a school admin of this school</b><span class="muted">Renew to restore access for everyone. Contact the School OS team: <span class="placeholder">[SUPPORT CONTACT]</span></span></div>
+          <a href="#" class="btn btn-block" data-go="signedout">Sign out</a>
+        </div></div></div>
+      </section>
+
+      <!-- ═══════════════ SIGNED OUT ═══════════════ -->
+      <section class="screen" data-screen="signedout" data-title="Signed out" data-who="Everyone"
+        data-note="After signing out. Signing out of School OS also ends the license-server session.">
+        <div class="auth"><div class="auth-main"><div class="auth-card centered-state">
+          <div class="brand" style="align-self:flex-start"><div class="mark">OS</div><div class="name"><b>School OS</b><span>Secure sign-in</span></div></div>
+          <div class="state-icon" style="margin-top:40px"><svg class="icon"><use href="#i-check"/></svg></div>
+          <div><h2>You're signed out</h2><p class="lead">You can close this window, or sign in again.</p></div>
+          <a href="#" class="btn btn-primary btn-block" data-go="signin">Sign in again</a>
+        </div></div></div>
+      </section>
+
+      <!-- ═══════════════ DEV INBOX ═══════════════ -->
+      <section class="screen" data-screen="devinbox" data-title="Dev inbox" data-who="You, on your computer only"
+        data-note="http://localhost:4000/dev/inbox — exists only when the license server runs in local mode. Every email or SMS it would send lands here, with clickable links and visible codes. Real email comes later; Twilio SMS is the last stage.">
+        <div class="inbox">
+          <div class="inbox-banner"><svg class="icon"><use href="#i-inbox"/></svg><span><b>Local development only.</b> Nothing here was really sent.</span></div>
+          <div class="inbox-head">
+            <h2>Dev inbox</h2>
+            <div class="chips" role="group" aria-label="Filter messages">
+              <button type="button" class="chip" aria-pressed="true">All 4</button>
+              <button type="button" class="chip" aria-pressed="false">Email 3</button>
+              <button type="button" class="chip" aria-pressed="false">SMS 1</button>
+            </div>
+            <span class="spacer" style="flex:1"></span>
+            <a href="#" class="btn btn-sm" data-go="signin">Open sign-in</a>
+          </div>
+          <div class="inbox-body">
+            <div class="msg-list">
+              <button type="button" class="msg" aria-current="true" data-msg="reset">
+                <span class="top"><span>priya.nair@example.com</span><span>just now</span></span>
+                <span class="subj">Reset your School OS password</span>
+                <span class="top"><span class="chan">EMAIL</span><span>reset_password</span></span>
+              </button>
+              <button type="button" class="msg" data-msg="invite">
+                <span class="top"><span>asha.rao@example.com</span><span>2 min ago</span></span>
+                <span class="subj">You're invited to Green Valley School</span>
+                <span class="top"><span class="chan">EMAIL</span><span>set_password</span></span>
+              </button>
+              <button type="button" class="msg" data-msg="sms">
+                <span class="top"><span>+91 90000 00001</span><span>1 h ago</span></span>
+                <span class="subj">Your verification code</span>
+                <span class="top"><span class="chan">SMS</span><span>verify_mobile</span></span>
+              </button>
+              <button type="button" class="msg" data-msg="expiring">
+                <span class="top"><span>asha.rao@example.com</span><span>yesterday</span></span>
+                <span class="subj">Your trial ends in 2 days</span>
+                <span class="top"><span class="chan">EMAIL</span><span>license_expiring</span></span>
+              </button>
+            </div>
+            <div class="msg-view">
+              <div data-view="reset">
+                <dl class="meta"><dt class="muted">To</dt><dd style="margin:0">priya.nair@example.com</dd><dt class="muted">Subject</dt><dd style="margin:0">Reset your School OS password</dd><dt class="muted">Transport</dt><dd style="margin:0">dev inbox (not sent)</dd></dl>
+                <div class="mail" style="margin-top:16px">
+                  <b>Hi Priya,</b>
+                  <span>Someone asked to reset the password for your School OS account. If it was you, use the button below. It works once and expires in 15 minutes.</span>
+                  <a href="#" class="btn btn-primary" data-go="reset" style="align-self:flex-start">Reset password</a>
+                  <span class="hint">If you didn't ask for this, ignore this email — your password stays the same.</span>
+                </div>
+              </div>
+              <div data-view="invite" hidden>
+                <dl class="meta"><dt class="muted">To</dt><dd style="margin:0">asha.rao@example.com</dd><dt class="muted">Subject</dt><dd style="margin:0">You're invited to Green Valley School</dd><dt class="muted">Transport</dt><dd style="margin:0">dev inbox (not sent)</dd></dl>
+                <div class="mail" style="margin-top:16px">
+                  <b>Hi Asha,</b>
+                  <span>You've been invited as School admin of Green Valley School on School OS. Set your password to get started. This link works once and expires in 7 days.</span>
+                  <a href="#" class="btn btn-primary" data-go="setpassword" style="align-self:flex-start">Set your password</a>
+                </div>
+              </div>
+              <div data-view="sms" hidden>
+                <dl class="meta"><dt class="muted">To</dt><dd style="margin:0">+91 90000 00001</dd><dt class="muted">Transport</dt><dd style="margin:0">dev inbox (Twilio in the last phase)</dd></dl>
+                <div class="mail" style="margin-top:16px">
+                  <span>School OS code:</span>
+                  <span class="code-box mono">482913</span>
+                  <span class="hint">Valid for 10 minutes. Never share this code.</span>
+                </div>
+              </div>
+              <div data-view="expiring" hidden>
+                <dl class="meta"><dt class="muted">To</dt><dd style="margin:0">asha.rao@example.com</dd><dt class="muted">Subject</dt><dd style="margin:0">Your trial ends in 2 days</dd><dt class="muted">Transport</dt><dd style="margin:0">dev inbox (not sent)</dd></dl>
+                <div class="mail" style="margin-top:16px">
+                  <b>Hi Asha,</b>
+                  <span>Green Valley School's free trial ends on 7 Oct 2026. After that, only school admins can sign in until the school renews.</span>
+                  <span>To continue, contact the School OS team: <span class="placeholder">[SUPPORT CONTACT]</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ ADMIN: SCHOOLS ═══════════════ -->
+      <section class="screen" data-screen="schools" data-title="Admin — Schools" data-who="Platform staff"
+        data-note="The list of every school using School OS, with status and licence. Schools are created in School OS by platform staff or by a school's own sign-up — not here. Click a school name to open it.">
+        <div class="adm">
+          <div class="adm-mtop"><button type="button" class="x" data-menu aria-label="Open menu"><svg class="icon"><use href="#i-menu"/></svg></button><div class="brand"><div class="mark">OS</div><div class="name"><b>License admin</b><span></span></div></div></div>
+          <aside class="adm-side">
+            <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>License admin</span></div></div>
+            <a href="#" class="nav" data-go="schools" aria-current="page"><svg class="icon"><use href="#i-school"/></svg>Schools</a>
+            <a href="#" class="nav" data-go="plans"><svg class="icon"><use href="#i-plan"/></svg>Plans</a>
+            <a href="#" class="nav" data-go="licences"><svg class="icon"><use href="#i-key"/></svg>Licences</a>
+            <a href="#" class="nav" data-go="staff"><svg class="icon"><use href="#i-users"/></svg>Platform staff</a>
+            <a href="#" class="nav" data-go="audit"><svg class="icon"><use href="#i-list"/></svg>Audit log</a>
+            <div class="sep"></div>
+            <a href="#" class="nav" data-go="devinbox"><svg class="icon"><use href="#i-inbox"/></svg>Dev inbox <span class="hint" style="margin-left:auto">local</span></a>
+            <div class="grow"></div>
+            <div class="me"><span class="avatar">PN</span><span class="who"><b>Priya Nair</b><span>Platform admin</span></span></div>
+            <a href="#" class="nav" data-go="signedout"><svg class="icon"><use href="#i-out"/></svg>Sign out</a>
+          </aside>
+          <div class="adm-main">
+            <div class="page-head">
+              <div><h2>Schools</h2><p>Every school on School OS. New schools come from School OS or from self-service sign-up.</p></div>
+            </div>
+            <div class="toolbar">
+              <div class="search"><svg class="icon"><use href="#i-search"/></svg><label class="sr-only" for="q-s">Search schools</label><input class="input" id="q-s" placeholder="Search by name or admin email"></div>
+              <div class="chips" role="group" aria-label="Filter by status">
+                <button type="button" class="chip" aria-pressed="true">All 5</button>
+                <button type="button" class="chip" aria-pressed="false">Active 2</button>
+                <button type="button" class="chip" aria-pressed="false">Trial 1</button>
+                <button type="button" class="chip" aria-pressed="false">Inactive 1</button>
+                <button type="button" class="chip" aria-pressed="false">Suspended 1</button>
+              </div>
+            </div>
+            <div class="card flat-mobile tbl-wrap">
+              <table class="tbl">
+                <thead><tr><th>School</th><th>Status</th><th>Licence</th><th>Ends</th><th>Signed up by</th><th>Admins</th></tr></thead>
+                <tbody>
+                  <tr><td data-label=""><a href="#" data-go="school-detail" class="strong">Green Valley School</a></td><td data-label="Status"><span class="badge b-trial">Trial</span></td><td data-label="Licence">Free trial · 7 days</td><td data-label="Ends">7 Oct 2026</td><td data-label="Signed up by">Self-service</td><td data-label="Admins">1</td></tr>
+                  <tr><td data-label=""><a href="#" data-go="school-detail" class="strong">Riverside Academy</a></td><td data-label="Status"><span class="badge b-active">Active</span></td><td data-label="Licence"><span class="placeholder">[PAID PLAN]</span></td><td data-label="Ends">31 Mar 2027</td><td data-label="Signed up by">Platform staff</td><td data-label="Admins">2</td></tr>
+                  <tr><td data-label=""><a href="#" data-go="school-detail" class="strong">Sunrise Public School</a></td><td data-label="Status"><span class="badge b-active">Active</span></td><td data-label="Licence"><span class="placeholder">[PAID PLAN]</span></td><td data-label="Ends">30 Jun 2027</td><td data-label="Signed up by">Platform staff</td><td data-label="Admins">3</td></tr>
+                  <tr><td data-label=""><a href="#" data-go="school-detail" class="strong">Northfield School</a></td><td data-label="Status"><span class="badge b-inactive">Inactive</span></td><td data-label="Licence">Trial ended</td><td data-label="Ends">24 Sep 2026</td><td data-label="Signed up by">Self-service</td><td data-label="Admins">1</td></tr>
+                  <tr><td data-label=""><a href="#" data-go="school-detail" class="strong">Cedar Grove Academy</a></td><td data-label="Status"><span class="badge b-suspended">Suspended</span></td><td data-label="Licence"><span class="placeholder">[PAID PLAN]</span></td><td data-label="Ends">—</td><td data-label="Signed up by">Platform staff</td><td data-label="Admins">1</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ ADMIN: SCHOOL DETAIL ═══════════════ -->
+      <section class="screen" data-screen="school-detail" data-title="Admin — School detail" data-who="Platform staff"
+        data-note="One school: its status, licence and limits, its admins, licence history and recent activity. Try Suspend, Assign plan and Extend trial — each opens a dialog. Every change is written to the audit log and sent to School OS.">
+        <div class="adm">
+          <div class="adm-mtop"><button type="button" class="x" data-menu aria-label="Open menu"><svg class="icon"><use href="#i-menu"/></svg></button><div class="brand"><div class="mark">OS</div><div class="name"><b>License admin</b><span></span></div></div></div>
+          <aside class="adm-side">
+            <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>License admin</span></div></div>
+            <a href="#" class="nav" data-go="schools" aria-current="page"><svg class="icon"><use href="#i-school"/></svg>Schools</a>
+            <a href="#" class="nav" data-go="plans"><svg class="icon"><use href="#i-plan"/></svg>Plans</a>
+            <a href="#" class="nav" data-go="licences"><svg class="icon"><use href="#i-key"/></svg>Licences</a>
+            <a href="#" class="nav" data-go="staff"><svg class="icon"><use href="#i-users"/></svg>Platform staff</a>
+            <a href="#" class="nav" data-go="audit"><svg class="icon"><use href="#i-list"/></svg>Audit log</a>
+            <div class="sep"></div>
+            <a href="#" class="nav" data-go="devinbox"><svg class="icon"><use href="#i-inbox"/></svg>Dev inbox <span class="hint" style="margin-left:auto">local</span></a>
+            <div class="grow"></div>
+            <div class="me"><span class="avatar">PN</span><span class="who"><b>Priya Nair</b><span>Platform admin</span></span></div>
+            <a href="#" class="nav" data-go="signedout"><svg class="icon"><use href="#i-out"/></svg>Sign out</a>
+          </aside>
+          <div class="adm-main">
+            <div class="crumbs"><a href="#" data-go="schools">Schools</a><span>/</span><span>Green Valley School</span></div>
+            <div class="page-head">
+              <div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2>Green Valley School</h2><span class="badge b-trial">Trial</span></div>
+                <p>Signed up by itself on 30 Sep 2026 · ID <span class="mono">8d2f6c1e-…-41ab</span></p>
+              </div>
+              <div class="acts">
+                <button type="button" class="btn btn-sm" data-modal="m-extend">Extend trial</button>
+                <button type="button" class="btn btn-sm btn-primary" data-modal="m-assign">Assign plan</button>
+                <button type="button" class="btn btn-sm btn-ghost-danger" data-modal="m-suspend">Suspend</button>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div style="display:flex;flex-direction:column;gap:20px">
+                <div class="card">
+                  <div class="card-h"><h3>Licence</h3><span class="hint">5 days left</span></div>
+                  <div class="card-b">
+                    <dl class="kv"><dt>Plan</dt><dd>Free trial (7 days)</dd><dt>Started</dt><dd>30 Sep 2026 — when the admin set a password</dd><dt>Ends</dt><dd>7 Oct 2026 · no grace period</dd><dt>Status source</dt><dd>Licence (not a manual change)</dd></dl>
+                    <div class="limits">
+                      <div class="limit"><b>1</b><span>branch</span></div>
+                      <div class="limit"><b>100</b><span>students</span></div>
+                      <div class="limit"><b>20</b><span>staff</span></div>
+                    </div>
+                    <span class="hint">School OS enforces these limits when the school adds branches, students or staff.</span>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-h"><h3>Licence history</h3></div>
+                  <div class="tbl-wrap">
+                    <table class="tbl">
+                      <thead><tr><th>Plan</th><th>Status</th><th>From</th><th>To</th><th>By</th></tr></thead>
+                      <tbody><tr><td data-label="Plan">Free trial</td><td data-label="Status"><span class="badge b-trial">Trial</span></td><td data-label="From">30 Sep 2026</td><td data-label="To">7 Oct 2026</td><td data-label="By">System (sign-up)</td></tr></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:20px">
+                <div class="card">
+                  <div class="card-h"><h3>School admins</h3><span class="hint">can sign in to renew</span></div>
+                  <div class="card-b">
+                    <div class="person"><span class="avatar">AR</span><span class="txt"><b>Asha Rao</b><span>asha.rao@example.com · two-step on</span></span><span class="badge b-active" style="margin-left:auto">Active</span></div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-h"><h3>Recent activity</h3><a href="#" data-go="audit" style="font-size:13px">Audit log</a></div>
+                  <div class="card-b">
+                    <ul class="timeline">
+                      <li><span class="dot"></span><span>Trial licence created (7 days)<time>30 Sep 2026, 10:14 · System</time></span></li>
+                      <li><span class="dot"></span><span>Asha Rao set a password and turned on two-step<time>30 Sep 2026, 10:13</time></span></li>
+                      <li><span class="dot"></span><span>School signed up · asha.rao@example.com<time>30 Sep 2026, 10:02 · Self-service</time></span></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ ADMIN: PLANS ═══════════════ -->
+      <section class="screen" data-screen="plans" data-title="Admin — Plans" data-who="Platform staff"
+        data-note="The plans schools can be on, including the free trial. Changing a plan affects new licences only — schools already on it keep their dates and limits.">
+        <div class="adm">
+          <div class="adm-mtop"><button type="button" class="x" data-menu aria-label="Open menu"><svg class="icon"><use href="#i-menu"/></svg></button><div class="brand"><div class="mark">OS</div><div class="name"><b>License admin</b><span></span></div></div></div>
+          <aside class="adm-side">
+            <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>License admin</span></div></div>
+            <a href="#" class="nav" data-go="schools"><svg class="icon"><use href="#i-school"/></svg>Schools</a>
+            <a href="#" class="nav" data-go="plans" aria-current="page"><svg class="icon"><use href="#i-plan"/></svg>Plans</a>
+            <a href="#" class="nav" data-go="licences"><svg class="icon"><use href="#i-key"/></svg>Licences</a>
+            <a href="#" class="nav" data-go="staff"><svg class="icon"><use href="#i-users"/></svg>Platform staff</a>
+            <a href="#" class="nav" data-go="audit"><svg class="icon"><use href="#i-list"/></svg>Audit log</a>
+            <div class="sep"></div>
+            <a href="#" class="nav" data-go="devinbox"><svg class="icon"><use href="#i-inbox"/></svg>Dev inbox <span class="hint" style="margin-left:auto">local</span></a>
+            <div class="grow"></div>
+            <div class="me"><span class="avatar">PN</span><span class="who"><b>Priya Nair</b><span>Platform admin</span></span></div>
+            <a href="#" class="nav" data-go="signedout"><svg class="icon"><use href="#i-out"/></svg>Sign out</a>
+          </aside>
+          <div class="adm-main">
+            <div class="page-head">
+              <div><h2>Plans</h2><p>What a school gets and for how long. Prices and paid plans are yours to decide.</p></div>
+              <div class="acts"><button type="button" class="btn btn-sm btn-primary"><svg class="icon"><use href="#i-plus"/></svg>New plan</button></div>
+            </div>
+            <div class="grid-2">
+              <div class="card flat-mobile tbl-wrap">
+                <table class="tbl">
+                  <thead><tr><th>Plan</th><th>Length</th><th>Price</th><th>Limits (branches · students · staff)</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td data-label="" class="strong">Free trial</td><td data-label="Length">7 days</td><td data-label="Price">Free</td><td data-label="Limits">1 · 100 · 20</td><td data-label="Status"><span class="badge b-active">Active</span></td></tr>
+                    <tr><td data-label="" class="strong"><span class="placeholder">[PAID PLAN]</span></td><td data-label="Length"><span class="placeholder">[MONTHLY / YEARLY]</span></td><td data-label="Price"><span class="placeholder">[YOUR PRICE]</span></td><td data-label="Limits"><span class="placeholder">[LIMITS]</span></td><td data-label="Status"><span class="badge b-pending">Draft</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="card">
+                <div class="card-h"><h3>Edit plan: Free trial</h3></div>
+                <form class="card-b">
+                  <div class="field"><label for="p-name">Name</label><input class="input" id="p-name" value="Free trial"></div>
+                  <div class="form-grid">
+                    <div class="field"><label for="p-len">Length (days)</label><input class="input" id="p-len" inputmode="numeric" value="7"></div>
+                    <div class="field"><label for="p-grace">Grace days after it ends</label><input class="input" id="p-grace" inputmode="numeric" value="0"></div>
+                    <div class="field"><label for="p-br">Branches</label><input class="input" id="p-br" inputmode="numeric" value="1"></div>
+                    <div class="field"><label for="p-st">Students</label><input class="input" id="p-st" inputmode="numeric" value="100"></div>
+                    <div class="field"><label for="p-sf">Staff</label><input class="input" id="p-sf" inputmode="numeric" value="20"></div>
+                    <div class="field"><label for="p-price">Price</label><input class="input" id="p-price" value="Free"></div>
+                  </div>
+                  <fieldset style="border:0;padding:0;margin:0" class="field">
+                    <legend class="lbl">Features</legend>
+                    <label class="check"><input type="checkbox" checked>All School OS features</label>
+                  </fieldset>
+                  <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn-sm">Cancel</button><button type="button" class="btn btn-sm btn-primary">Save plan</button></div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ ADMIN: LICENCES ═══════════════ -->
+      <section class="screen" data-screen="licences" data-title="Admin — Licences" data-who="Platform staff"
+        data-note="Every school's current licence. Assign or change a plan, renew, extend a trial or cancel. Changes reach School OS straight away (it shows or blocks the school accordingly).">
+        <div class="adm">
+          <div class="adm-mtop"><button type="button" class="x" data-menu aria-label="Open menu"><svg class="icon"><use href="#i-menu"/></svg></button><div class="brand"><div class="mark">OS</div><div class="name"><b>License admin</b><span></span></div></div></div>
+          <aside class="adm-side">
+            <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>License admin</span></div></div>
+            <a href="#" class="nav" data-go="schools"><svg class="icon"><use href="#i-school"/></svg>Schools</a>
+            <a href="#" class="nav" data-go="plans"><svg class="icon"><use href="#i-plan"/></svg>Plans</a>
+            <a href="#" class="nav" data-go="licences" aria-current="page"><svg class="icon"><use href="#i-key"/></svg>Licences</a>
+            <a href="#" class="nav" data-go="staff"><svg class="icon"><use href="#i-users"/></svg>Platform staff</a>
+            <a href="#" class="nav" data-go="audit"><svg class="icon"><use href="#i-list"/></svg>Audit log</a>
+            <div class="sep"></div>
+            <a href="#" class="nav" data-go="devinbox"><svg class="icon"><use href="#i-inbox"/></svg>Dev inbox <span class="hint" style="margin-left:auto">local</span></a>
+            <div class="grow"></div>
+            <div class="me"><span class="avatar">PN</span><span class="who"><b>Priya Nair</b><span>Platform admin</span></span></div>
+            <a href="#" class="nav" data-go="signedout"><svg class="icon"><use href="#i-out"/></svg>Sign out</a>
+          </aside>
+          <div class="adm-main">
+            <div class="page-head">
+              <div><h2>Licences</h2><p>Current licence for each school. Past licences are on each school's page.</p></div>
+              <div class="acts"><button type="button" class="btn btn-sm btn-primary" data-modal="m-assign">Assign plan</button></div>
+            </div>
+            <div class="card flat-mobile tbl-wrap">
+              <table class="tbl">
+                <thead><tr><th>School</th><th>Plan</th><th>Status</th><th>Starts</th><th>Ends</th><th>Grace until</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td data-label="" class="strong"><a href="#" data-go="school-detail">Green Valley School</a></td><td data-label="Plan">Free trial</td><td data-label="Status"><span class="badge b-trial">Trial</span></td><td data-label="Starts">30 Sep 2026</td><td data-label="Ends">7 Oct 2026</td><td data-label="Grace until">—</td><td data-label=""><div class="actions"><button type="button" class="btn btn-sm" data-modal="m-extend">Extend</button><button type="button" class="btn btn-sm" data-modal="m-assign">Assign plan</button></div></td></tr>
+                  <tr><td data-label="" class="strong"><a href="#" data-go="school-detail">Riverside Academy</a></td><td data-label="Plan"><span class="placeholder">[PAID PLAN]</span></td><td data-label="Status"><span class="badge b-active">Active</span></td><td data-label="Starts">1 Apr 2026</td><td data-label="Ends">31 Mar 2027</td><td data-label="Grace until"><span class="placeholder">[GRACE]</span></td><td data-label=""><div class="actions"><button type="button" class="btn btn-sm">Renew</button><button type="button" class="btn btn-sm btn-ghost-danger">Cancel</button></div></td></tr>
+                  <tr><td data-label="" class="strong"><a href="#" data-go="school-detail">Northfield School</a></td><td data-label="Plan">Free trial</td><td data-label="Status"><span class="badge b-inactive">Expired</span></td><td data-label="Starts">17 Sep 2026</td><td data-label="Ends">24 Sep 2026</td><td data-label="Grace until">—</td><td data-label=""><div class="actions"><button type="button" class="btn btn-sm btn-primary" data-modal="m-assign">Assign plan</button></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ ADMIN: PLATFORM STAFF ═══════════════ -->
+      <section class="screen" data-screen="staff" data-title="Admin — Platform staff" data-who="Platform staff with “can manage licences”"
+        data-note="People on the School OS team who can use this admin area. Invite someone by email (the invitation lands in the dev inbox locally), choose whether they can manage licences, reset their two-step if they lose their phone, or disable them. Nobody can disable themselves or the last remaining admin.">
+        <div class="adm">
+          <div class="adm-mtop"><button type="button" class="x" data-menu aria-label="Open menu"><svg class="icon"><use href="#i-menu"/></svg></button><div class="brand"><div class="mark">OS</div><div class="name"><b>License admin</b><span></span></div></div></div>
+          <aside class="adm-side">
+            <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>License admin</span></div></div>
+            <a href="#" class="nav" data-go="schools"><svg class="icon"><use href="#i-school"/></svg>Schools</a>
+            <a href="#" class="nav" data-go="plans"><svg class="icon"><use href="#i-plan"/></svg>Plans</a>
+            <a href="#" class="nav" data-go="licences"><svg class="icon"><use href="#i-key"/></svg>Licences</a>
+            <a href="#" class="nav" data-go="staff" aria-current="page"><svg class="icon"><use href="#i-users"/></svg>Platform staff</a>
+            <a href="#" class="nav" data-go="audit"><svg class="icon"><use href="#i-list"/></svg>Audit log</a>
+            <div class="sep"></div>
+            <a href="#" class="nav" data-go="devinbox"><svg class="icon"><use href="#i-inbox"/></svg>Dev inbox <span class="hint" style="margin-left:auto">local</span></a>
+            <div class="grow"></div>
+            <div class="me"><span class="avatar">PN</span><span class="who"><b>Priya Nair</b><span>Platform admin</span></span></div>
+            <a href="#" class="nav" data-go="signedout"><svg class="icon"><use href="#i-out"/></svg>Sign out</a>
+          </aside>
+          <div class="adm-main">
+            <div class="page-head">
+              <div><h2>Platform staff</h2><p>The School OS team. Only people who can manage licences see this area.</p></div>
+              <div class="acts"><button type="button" class="btn btn-sm btn-primary" data-modal="m-invite"><svg class="icon"><use href="#i-plus"/></svg>Invite staff member</button></div>
+            </div>
+            <div class="card flat-mobile tbl-wrap">
+              <table class="tbl">
+                <thead><tr><th>Name</th><th>Can manage licences</th><th>Two-step</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td data-label=""><div class="person"><span class="avatar">PN</span><span class="txt"><b>Priya Nair (you)</b><span>priya.nair@example.com</span></span></div></td><td data-label="Can manage licences"><label class="switch"><input type="checkbox" checked disabled aria-label="Priya Nair can manage licences">Yes</label></td><td data-label="Two-step"><span class="badge b-success">On</span></td><td data-label="Status"><span class="badge b-active">Active</span></td><td data-label="Last sign-in">Just now</td><td data-label=""><span class="hint">You can't disable yourself</span></td></tr>
+                  <tr><td data-label=""><div class="person"><span class="avatar">AM</span><span class="txt"><b>Arjun Mehta</b><span>arjun.mehta@example.com</span></span></div></td><td data-label="Can manage licences"><label class="switch"><input type="checkbox" aria-label="Arjun Mehta can manage licences">No</label></td><td data-label="Two-step"><span class="badge b-success">On</span></td><td data-label="Status"><span class="badge b-active">Active</span></td><td data-label="Last sign-in">28 Sep 2026</td><td data-label=""><div class="actions"><button type="button" class="btn btn-sm">Reset two-step</button><button type="button" class="btn btn-sm btn-ghost-danger">Disable</button></div></td></tr>
+                  <tr><td data-label=""><div class="person"><span class="avatar">DI</span><span class="txt"><b>Divya Iyer</b><span>divya.iyer@example.com</span></span></div></td><td data-label="Can manage licences"><label class="switch"><input type="checkbox" checked aria-label="Divya Iyer can manage licences">Yes</label></td><td data-label="Two-step"><span class="badge b-pending">Not set up</span></td><td data-label="Status"><span class="badge b-pending">Invited</span></td><td data-label="Last sign-in">—</td><td data-label=""><div class="actions"><button type="button" class="btn btn-sm">Resend invitation</button><button type="button" class="btn btn-sm btn-ghost-danger">Cancel invitation</button></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="rule">Rules: platform staff always use two-step sign-in. Nobody can disable themselves, and the last person who can manage licences can't be disabled or lose that permission.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ ADMIN: AUDIT LOG ═══════════════ -->
+      <section class="screen" data-screen="audit" data-title="Admin — Audit log" data-who="Platform staff"
+        data-note="Every sign-in attempt and every change, including refused attempts. Read-only: entries can't be edited or deleted.">
+        <div class="adm">
+          <div class="adm-mtop"><button type="button" class="x" data-menu aria-label="Open menu"><svg class="icon"><use href="#i-menu"/></svg></button><div class="brand"><div class="mark">OS</div><div class="name"><b>License admin</b><span></span></div></div></div>
+          <aside class="adm-side">
+            <div class="brand"><div class="mark">OS</div><div class="name"><b>School OS</b><span>License admin</span></div></div>
+            <a href="#" class="nav" data-go="schools"><svg class="icon"><use href="#i-school"/></svg>Schools</a>
+            <a href="#" class="nav" data-go="plans"><svg class="icon"><use href="#i-plan"/></svg>Plans</a>
+            <a href="#" class="nav" data-go="licences"><svg class="icon"><use href="#i-key"/></svg>Licences</a>
+            <a href="#" class="nav" data-go="staff"><svg class="icon"><use href="#i-users"/></svg>Platform staff</a>
+            <a href="#" class="nav" data-go="audit" aria-current="page"><svg class="icon"><use href="#i-list"/></svg>Audit log</a>
+            <div class="sep"></div>
+            <a href="#" class="nav" data-go="devinbox"><svg class="icon"><use href="#i-inbox"/></svg>Dev inbox <span class="hint" style="margin-left:auto">local</span></a>
+            <div class="grow"></div>
+            <div class="me"><span class="avatar">PN</span><span class="who"><b>Priya Nair</b><span>Platform admin</span></span></div>
+            <a href="#" class="nav" data-go="signedout"><svg class="icon"><use href="#i-out"/></svg>Sign out</a>
+          </aside>
+          <div class="adm-main">
+            <div class="page-head"><div><h2>Audit log</h2><p>Read-only record of sign-ins and changes. Refused attempts are kept too.</p></div></div>
+            <div class="toolbar">
+              <div class="field" style="min-width:180px"><label for="a-act">Action</label><select class="input" id="a-act"><option>All actions</option><option>Sign-ins</option><option>School status</option><option>Licences</option><option>Staff</option></select></div>
+              <div class="field" style="min-width:180px"><label for="a-sch">School</label><select class="input" id="a-sch"><option>All schools</option><option>Green Valley School</option><option>Cedar Grove Academy</option></select></div>
+              <div class="field" style="min-width:150px"><label for="a-out">Outcome</label><select class="input" id="a-out"><option>Any</option><option>Success</option><option>Refused</option></select></div>
+            </div>
+            <div class="card flat-mobile tbl-wrap">
+              <table class="tbl">
+                <thead><tr><th>When</th><th>Who</th><th>What happened</th><th>School</th><th>Outcome</th></tr></thead>
+                <tbody>
+                  <tr><td data-label="When">2 Oct 2026, 10:42</td><td data-label="Who">Priya Nair</td><td data-label="What happened">Signed in with two-step</td><td data-label="School">—</td><td data-label="Outcome"><span class="badge b-success">Success</span></td></tr>
+                  <tr><td data-label="When">2 Oct 2026, 10:31</td><td data-label="Who">unknown</td><td data-label="What happened">Sign-in with a wrong password</td><td data-label="School">—</td><td data-label="Outcome"><span class="badge b-denied">Refused</span></td></tr>
+                  <tr><td data-label="When">1 Oct 2026, 16:05</td><td data-label="Who">Arjun Mehta</td><td data-label="What happened">Suspended school — reason: “Payment dispute”</td><td data-label="School">Cedar Grove Academy</td><td data-label="Outcome"><span class="badge b-success">Success</span></td></tr>
+                  <tr><td data-label="When">30 Sep 2026, 10:14</td><td data-label="Who">System</td><td data-label="What happened">Trial licence created (7 days)</td><td data-label="School">Green Valley School</td><td data-label="Outcome"><span class="badge b-success">Success</span></td></tr>
+                  <tr><td data-label="When">30 Sep 2026, 10:13</td><td data-label="Who">Asha Rao</td><td data-label="What happened">Set password and turned on two-step</td><td data-label="School">Green Valley School</td><td data-label="Outcome"><span class="badge b-success">Success</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ DIALOGS ═══════════════ -->
+      <div class="modal-bg" id="m-suspend" role="dialog" aria-modal="true" aria-labelledby="m-suspend-t">
+        <div class="modal">
+          <div class="modal-h"><h3 id="m-suspend-t">Suspend Green Valley School?</h3><button type="button" class="x" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button></div>
+          <div class="modal-b">
+            <p style="margin:0" class="muted">Nobody from this school can sign in, including its admins, until you unsuspend it. A licence renewal does not undo a suspension.</p>
+            <div class="field"><label for="m-reason">Reason (required, saved in the audit log)</label><textarea class="input" id="m-reason">Example: payment dispute</textarea></div>
+          </div>
+          <div class="modal-f"><button type="button" class="btn btn-sm" data-close>Cancel</button><button type="button" class="btn btn-sm btn-danger" data-close>Suspend school</button></div>
+        </div>
+      </div>
+      <div class="modal-bg" id="m-assign" role="dialog" aria-modal="true" aria-labelledby="m-assign-t">
+        <div class="modal">
+          <div class="modal-h"><h3 id="m-assign-t">Assign a plan</h3><button type="button" class="x" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button></div>
+          <div class="modal-b">
+            <div class="field"><label for="m-school">School</label><select class="input" id="m-school"><option>Green Valley School</option><option>Northfield School</option></select></div>
+            <div class="field"><label for="m-plan">Plan</label><select class="input" id="m-plan"><option>[PAID PLAN]</option><option>Free trial</option></select></div>
+            <div class="form-grid"><div class="field"><label for="m-from">Starts</label><input class="input" id="m-from" value="7 Oct 2026"></div><div class="field"><label for="m-to">Ends</label><input class="input" id="m-to" value="set by the plan"></div></div>
+            <div class="field"><label for="m-pref">Payment reference (optional)</label><input class="input" id="m-pref" placeholder="Invoice or receipt number"></div>
+            <span class="hint">The school becomes active as soon as the plan starts.</span>
+          </div>
+          <div class="modal-f"><button type="button" class="btn btn-sm" data-close>Cancel</button><button type="button" class="btn btn-sm btn-primary" data-close>Assign plan</button></div>
+        </div>
+      </div>
+      <div class="modal-bg" id="m-extend" role="dialog" aria-modal="true" aria-labelledby="m-extend-t">
+        <div class="modal">
+          <div class="modal-h"><h3 id="m-extend-t">Extend the trial</h3><button type="button" class="x" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button></div>
+          <div class="modal-b">
+            <div class="field"><label for="m-days">Extra days</label><input class="input" id="m-days" inputmode="numeric" value="7"></div>
+            <div class="field"><label for="m-ereason">Reason (saved in the audit log)</label><input class="input" id="m-ereason" value="Example: setting up classes"></div>
+            <span class="hint">New end date: 14 Oct 2026.</span>
+          </div>
+          <div class="modal-f"><button type="button" class="btn btn-sm" data-close>Cancel</button><button type="button" class="btn btn-sm btn-primary" data-close>Extend trial</button></div>
+        </div>
+      </div>
+      <div class="modal-bg" id="m-invite" role="dialog" aria-modal="true" aria-labelledby="m-invite-t">
+        <div class="modal">
+          <div class="modal-h"><h3 id="m-invite-t">Invite a staff member</h3><button type="button" class="x" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button></div>
+          <div class="modal-b">
+            <div class="field"><label for="m-iname">Full name</label><input class="input" id="m-iname" value="Divya Iyer"></div>
+            <div class="field"><label for="m-imail">Work email</label><input class="input" id="m-imail" value="divya.iyer@example.com"></div>
+            <label class="check"><input type="checkbox" checked>Can manage licences (can use this admin area)</label>
+            <span class="hint">They get an email to set a password and two-step sign-in. Locally it appears in the dev inbox.</span>
+          </div>
+          <div class="modal-f"><button type="button" class="btn btn-sm" data-close>Cancel</button><button type="button" class="btn btn-sm btn-primary" data-close>Send invitation</button></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  (function () {
+    var device = document.getElementById('device');
+    var screens = Array.prototype.slice.call(document.querySelectorAll('.screen'));
+    var navButtons = Array.prototype.slice.call(document.querySelectorAll('.mk-nav [data-go]'));
+    var capTitle = document.getElementById('cap-title');
+    var capWho = document.getElementById('cap-who');
+    var capNote = document.getElementById('cap-note');
+
+    function closeModals() {
+      document.querySelectorAll('.modal-bg.open').forEach(function (m) { m.classList.remove('open'); });
+    }
+
+    function show(id) {
+      var target = screens.find(function (s) { return s.dataset.screen === id; }) || screens[0];
+      closeModals();
+      screens.forEach(function (s) { s.classList.toggle('on', s === target); });
+      document.querySelectorAll('.adm-side.open').forEach(function (s) { s.classList.remove('open'); });
+      navButtons.forEach(function (b) {
+        if (b.dataset.go === target.dataset.screen) b.setAttribute('aria-current', 'page');
+        else b.removeAttribute('aria-current');
+      });
+      capTitle.textContent = target.dataset.title;
+      capWho.textContent = target.dataset.who;
+      capNote.textContent = target.dataset.note;
+      device.scrollTop = 0;
+      if (location.hash !== '#' + target.dataset.screen) history.replaceState(null, '', '#' + target.dataset.screen);
+    }
+
+    function setMode(mode) {
+      device.dataset.mode = mode;
+      document.querySelectorAll('[data-mode-btn]').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b.dataset.modeBtn === mode));
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      var go = e.target.closest('[data-go]');
+      if (go) { e.preventDefault(); show(go.dataset.go); return; }
+      var open = e.target.closest('[data-modal]');
+      if (open) { e.preventDefault(); device.scrollTop = 0; document.getElementById(open.dataset.modal).classList.add('open'); return; }
+      if (e.target.closest('[data-close]') || e.target.classList.contains('modal-bg')) { closeModals(); return; }
+      var menu = e.target.closest('[data-menu]');
+      if (menu) { var side = menu.closest('.adm').querySelector('.adm-side'); side.classList.toggle('open'); return; }
+      var modeBtn = e.target.closest('[data-mode-btn]');
+      if (modeBtn) { setMode(modeBtn.dataset.modeBtn); return; }
+      var msg = e.target.closest('[data-msg]');
+      if (msg) {
+        var list = msg.parentElement;
+        list.querySelectorAll('[data-msg]').forEach(function (m) { m.setAttribute('aria-current', String(m === msg)); });
+        var view = list.parentElement.querySelector('.msg-view');
+        view.querySelectorAll('[data-view]').forEach(function (v) { v.hidden = v.dataset.view !== msg.dataset.msg; });
+        return;
+      }
+      var chip = e.target.closest('.chip');
+      if (chip) { chip.parentElement.querySelectorAll('.chip').forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); }); }
+    });
+
+    document.addEventListener('submit', function (e) { e.preventDefault(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModals(); });
+
+    show((location.hash || '#signin').slice(1));
+  })();
+</script>
+</body>
+</html>
